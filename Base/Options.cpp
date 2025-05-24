@@ -195,16 +195,18 @@ bool Load(int argc_, char* argv_[])
         }
         else
         {
+            auto full_path{ fs::absolute(pcszOption) };
+
             // Bare filenames will be inserted into drive 1 then 2
             switch (drive_arg++)
             {
             case 1:
-                SetOption(disk1, pcszOption);
+                SetOption(disk1, full_path.string());
                 SetOption(drive1, drvFloppy);
                 break;
 
             case 2:
-                SetOption(disk2, pcszOption);
+                SetOption(disk2, full_path.string());
                 SetOption(drive2, drvFloppy);
                 break;
 
