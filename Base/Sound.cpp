@@ -133,6 +133,7 @@ void SAADevice::Update(bool fFrameEnd_ = false)
 
 void SAADevice::FrameEnd()
 {
+    m_pSAASound->SetHighpass(GetOption(saahighpass));
     Update(true);
     m_samples_this_frame = 0;
 }

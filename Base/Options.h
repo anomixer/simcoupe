@@ -113,6 +113,7 @@ struct Config
     bool dallasclock = false;           // Enable DALLAS clock support?
 
     bool audiosync = false;             // Forced audio sync? (seamless but jittery)
+    bool saahighpass = true;            // Enable high-pass filter for SAA 1099
     int latency = 3;                    // Amount of sound buffering
     int dac7c = 1;                      // DAC device on shared port &7c? (0=none, 1=BlueAlpha Sampler, 2=SAMVox, 3=Paula)
     int samplerfreq = 18000;            // Blue Alpha Sampler clock frequency (default=18KHz)

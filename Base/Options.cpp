@@ -130,6 +130,7 @@ static bool SetNamedValue(const std::string& option_name, const std::string& str
     else if (name == "sambusclock") SetValue(g_config.sambusclock, str);
     else if (name == "dallasclock") SetValue(g_config.dallasclock, str);
     else if (name == "audiosync") SetValue(g_config.audiosync, str);
+    else if (name == "saahighpass") SetValue(g_config.saahighpass, str);
     else if (name == "latency") SetValue(g_config.latency, str);
     else if (name == "dac7c") SetValue(g_config.dac7c, str);
     else if (name == "samplerfreq") SetValue(g_config.samplerfreq, str);
@@ -303,6 +304,7 @@ bool Save()
         ofs << "sambusclock=" << to_string(g_config.sambusclock) << std::endl;
         ofs << "dallasclock=" << to_string(g_config.dallasclock) << std::endl;
         ofs << "audiosync=" << to_string(g_config.audiosync) << std::endl;
+        ofs << "saahighpass=" << to_string(g_config.saahighpass) << std::endl;
         ofs << "latency=" << to_string(g_config.latency) << std::endl;
         ofs << "dac7c=" << to_string(g_config.dac7c) << std::endl;
         ofs << "samplerfreq=" << to_string(g_config.samplerfreq) << std::endl;
