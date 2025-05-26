@@ -725,6 +725,10 @@ void Out(uint16_t port, uint8_t val)
             pSID->Out(port, val);
         break;
 
+    case PAULA_60_PORT:
+        pDAC->Output(val);
+        break;
+
     default:
     {
         if ((port & FLOPPY_MASK) == FLOPPY1_BASE)

@@ -24,6 +24,8 @@
 
 constexpr uint8_t KEMPSTON_PORT = 0x1f;
 
+constexpr uint8_t PAULA_60_PORT{ 0x60 };
+
 constexpr uint8_t BLUE_ALPHA_PORT = 0x7f;
 constexpr uint16_t BA_VOICEBOX_PORT = 0xff7f;
 constexpr uint16_t BA_SAMPLER_BASE = 0x7c7f;
