@@ -220,6 +220,7 @@ ZLibStream::ZLibStream(gzFile file, const std::string& filepath, size_t file_siz
 void ZLibStream::Close()
 {
     m_file.reset();
+    m_mode = FileMode::Closed;
 }
 
 size_t ZLibStream::GetSize()
