@@ -1,5 +1,16 @@
 # SimCoupe ChangeLog
 
+## Version 1.2.15 (2025-08-01)
+- fixed data loss when modifying compressed disk images
+- fixed double-click issue affecting Driver users [Win32]
+- fixed MRU entries for relative paths passed on command-line [Win32]
+- fixed white window flash on startup [Win32]
+- fixed stuck display image if ROM fast boot failed
+- added Paula DAC on port 0x60, used by Inner Circle Sample Demo
+- added zoom menu check against current zoom level [Win32]
+- added hidden option to control SAA high-pass filter
+- added hidden option to randomise im 2 bus values
+
 ## Version 1.2.14 (2025-05-04)
 - fixed emulator startup with no Win32 audio device (#97)
 - fixed key modifier use with numeric keypad (#93)
