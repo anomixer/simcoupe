@@ -85,6 +85,10 @@ void Drive::FrameEnd()
 {
     DiskDevice::FrameEnd();
 
+    // Sync disk dirty bit to persistent device dirty bit
+    if (m_disk && m_disk->IsModified())
+        m_modified = true;
+
     if (m_motor_off_frames && !--m_motor_off_frames)
     {
         m_regs.status &= ~MOTOR_ON;
@@ -578,6 +582,7 @@ Drive::ReadSector()
 
 uint8_t Drive::WriteSector(const std::vector<uint8_t>& data)
 {
+    m_modified = true;
     return m_disk->WriteData(m_cyl, m_head, m_sector_index, data);
 }
 
@@ -740,5 +745,6 @@ uint8_t Drive::WriteTrack(const std::vector<uint8_t>& data)
         }
     }
 
+    m_modified = true;
     return m_disk->FormatTrack(m_cyl, m_head, sectors);
 }

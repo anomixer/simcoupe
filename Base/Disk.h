@@ -139,6 +139,8 @@ public:
     std::string GetPath() { return m_stream->GetPath(); }
     std::string GetFile() { return m_stream->GetName(); }
     bool WriteProtected() const { return m_stream->WriteProtected(); }
+    bool IsModified() const { return m_modified; }
+    void ClearModified() { m_modified = false; }
     bool StreamChanged() const { return m_stream->LastWriteTime() != m_last_write_time; }
 
     virtual void Close();

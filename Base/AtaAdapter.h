@@ -29,10 +29,24 @@ public:
     void Out(uint16_t wPort_, uint8_t bVal_) override;
 
     void Reset() override;
-    void FrameEnd() override { if (m_uActive) m_uActive--; }
+    void Flush() override { if (m_pDisk0) m_pDisk0->Flush(); if (m_pDisk1) m_pDisk1->Flush(); }
+    void FrameEnd() override {
+        if (m_uActive) m_uActive--;
+        if (m_pDisk0 && m_pDisk0->IsModified()) m_modified0 = true;
+        if (m_pDisk1 && m_pDisk1->IsModified()) m_modified1 = true;
+    }
 
 public:
     bool IsActive() const { return m_uActive != 0; }
+    bool IsModified(int nDevice_) const {
+        if (nDevice_ == 0) return m_modified0 || (m_pDisk0 && m_pDisk0->IsModified());
+        if (nDevice_ == 1) return m_modified1 || (m_pDisk1 && m_pDisk1->IsModified());
+        return false;
+    }
+    void ClearModified(int nDevice_) {
+        if (nDevice_ == 0) { m_modified0 = false; if (m_pDisk0) m_pDisk0->ClearModified(); }
+        if (nDevice_ == 1) { m_modified1 = false; if (m_pDisk1) m_pDisk1->ClearModified(); }
+    }
 
 public:
     bool Attach(const std::string& disk_path, int nDevice_);
@@ -44,6 +58,7 @@ protected:
     void OutWord(uint16_t wPort_, uint16_t wVal_);
 
 protected:
+    bool m_modified0 = false, m_modified1 = false;
     unsigned int m_uActive = 0; // active when non-zero, decremented by FrameEnd()
 
 private:

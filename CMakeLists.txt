@@ -213,6 +213,85 @@ FetchContent_MakeAvailable(fmt)
 target_link_libraries(${PROJECT_NAME} PRIVATE fmt)
 target_include_directories(${PROJECT_NAME} PRIVATE ${fmt_SOURCE_DIR}/include)
 
+# --- ZLIB (Required for libspectrum and Zip support) ---
+find_package(ZLIB)
+if (NOT ZLIB_FOUND)
+  if (POLICY CMP0169)
+    cmake_policy(SET CMP0169 OLD)
+  endif()
+  message(STATUS "Fetching ZLIB from GitHub")
+  FetchContent_Declare(
+    zlib
+    GIT_REPOSITORY https://github.com/madler/zlib.git
+    GIT_TAG        v1.3.1
+  )
+  FetchContent_GetProperties(zlib)
+  if(NOT zlib_POPULATED)
+    FetchContent_Populate(zlib)
+    # Generate zconf.h manually since we're not running their CMake
+    configure_file(${zlib_SOURCE_DIR}/zconf.h.cmakein ${zlib_BINARY_DIR}/zconf.h @ONLY)
+  endif()
+
+  # Fetch BZip2
+  FetchContent_Declare(
+    bzip2
+    GIT_REPOSITORY https://github.com/libarchive/bzip2.git
+    GIT_TAG        master
+  )
+  FetchContent_GetProperties(bzip2)
+  if(NOT bzip2_POPULATED)
+    FetchContent_Populate(bzip2)
+    # Generate bz_version.h manually
+    set(BZ_VERSION "1.1.0")
+    configure_file(${bzip2_SOURCE_DIR}/bz_version.h.in ${bzip2_BINARY_DIR}/bz_version.h @ONLY)
+  endif()
+
+  # --- Manually Define ZLIB Target ---
+  set(ZLIB_SRCS
+    "${zlib_SOURCE_DIR}/adler32.c" "${zlib_SOURCE_DIR}/compress.c" "${zlib_SOURCE_DIR}/crc32.c"
+    "${zlib_SOURCE_DIR}/deflate.c" "${zlib_SOURCE_DIR}/gzclose.c" "${zlib_SOURCE_DIR}/gzlib.c"
+    "${zlib_SOURCE_DIR}/gzread.c" "${zlib_SOURCE_DIR}/gzwrite.c" "${zlib_SOURCE_DIR}/inflate.c"
+    "${zlib_SOURCE_DIR}/infback.c" "${zlib_SOURCE_DIR}/inftrees.c" "${zlib_SOURCE_DIR}/inffast.c"
+    "${zlib_SOURCE_DIR}/trees.c" "${zlib_SOURCE_DIR}/uncompr.c" "${zlib_SOURCE_DIR}/zutil.c"
+  )
+  add_library(zlib_static STATIC ${ZLIB_SRCS})
+  target_include_directories(zlib_static PUBLIC "${zlib_SOURCE_DIR}" "${zlib_BINARY_DIR}")
+  set(ZLIB_FOUND 1)
+  set(ZLIB_LIBRARIES zlib_static)
+  if (NOT TARGET ZLIB::ZLIB)
+    add_library(ZLIB::ZLIB ALIAS zlib_static)
+  endif()
+
+  # --- Manually Define BZip2 Target ---
+  set(BZIP2_SRCS
+    "${bzip2_SOURCE_DIR}/blocksort.c" "${bzip2_SOURCE_DIR}/huffman.c" "${bzip2_SOURCE_DIR}/crctable.c"
+    "${bzip2_SOURCE_DIR}/randtable.c" "${bzip2_SOURCE_DIR}/compress.c" "${bzip2_SOURCE_DIR}/decompress.c"
+    "${bzip2_SOURCE_DIR}/bzlib.c"
+  )
+  add_library(bz2_static STATIC ${BZIP2_SRCS})
+  target_include_directories(bz2_static PUBLIC "${bzip2_SOURCE_DIR}" "${bzip2_BINARY_DIR}")
+  set(BZIP2_FOUND 1)
+  set(BZIP2_LIBRARIES bz2_static)
+  if (NOT TARGET BZip2::BZip2)
+    add_library(BZip2::BZip2 ALIAS bz2_static)
+  endif()
+  set(HAVE_LIBBZ2 1)
+endif()
+
+# --- Global Include Overrides (Ensure these are always applied) ---
+if (HAVE_LIBZ)
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/I${zlib_SOURCE_DIR}>" "$<$<COMPILE_LANGUAGE:C,CXX>:/I${zlib_BINARY_DIR}>")
+endif()
+
+if (HAVE_LIBBZ2)
+  add_compile_options("$<$<COMPILE_LANGUAGE:C,CXX>:/I${bzip2_SOURCE_DIR}>")
+endif()
+
+if (ZLIB_FOUND)
+  set(HAVE_LIBZ 1)
+endif()
+
+# --- resid ---
 message(STATUS "Fetching github.com/simonowen/resid")
 FetchContent_Declare(
   resid
@@ -224,6 +303,7 @@ add_subdirectory(${resid_SOURCE_DIR} ${resid_BINARY_DIR} EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PRIVATE resid)
 target_include_directories(${PROJECT_NAME} PRIVATE ${resid_SOURCE_DIR})
 
+# --- libspectrum ---
 message(STATUS "Fetching libspectrum from GitHub")
 FetchContent_Declare(
   spectrum
@@ -232,13 +312,20 @@ FetchContent_Declare(
   SOURCE_SUBDIR non-existent-directory )
 FetchContent_MakeAvailable(spectrum)
 add_subdirectory(${spectrum_SOURCE_DIR} ${spectrum_BINARY_DIR} EXCLUDE_FROM_ALL)
+
+# Brute force copy headers into libspectrum source dir because include paths are being ignored
+if (HAVE_LIBZ)
+  file(COPY "${zlib_SOURCE_DIR}/zlib.h" DESTINATION "${spectrum_SOURCE_DIR}")
+  file(COPY "${zlib_BINARY_DIR}/zconf.h" DESTINATION "${spectrum_SOURCE_DIR}")
+endif()
+
 target_link_libraries(${PROJECT_NAME} PRIVATE spectrum)
 target_include_directories(${PROJECT_NAME} PRIVATE ${spectrum_SOURCE_DIR})
 
+# --- Other Dependencies ---
 add_subdirectory(Extern/whereami EXCLUDE_FROM_ALL)
 target_link_libraries(${PROJECT_NAME} PRIVATE whereami)
 
-# Use bundled version of fdrawcmd.h for fdrawcmd.sys definitions.
 if (WIN32)
   target_include_directories(${PROJECT_NAME} PRIVATE Extern/fdrawcmd)
 endif()
@@ -247,30 +334,13 @@ set(CMAKE_THREAD_PREFER_PTHREAD pthread)
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 
-find_package(ZLIB)
-if (ZLIB_FOUND)
-  if (SIMCOUPE_PORTABLE)
-    target_link_libraries(${PROJECT_NAME} PRIVATE libz.a)
-  else()
-    target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
-  endif()
-  set(HAVE_LIBZ 1)
-  target_sources(${PROJECT_NAME} PRIVATE
-    Extern/zlib/contrib/minizip/ioapi.c
-    Extern/zlib/contrib/minizip/unzip.c
-    Extern/zlib/contrib/minizip/ioapi.h
-    Extern/zlib/contrib/minizip/unzip.h)
-  target_include_directories(${PROJECT_NAME} PRIVATE Extern/zlib/contrib/minizip)
-endif()
-
-find_package(BZip2)
-if (BZIP2_FOUND)
+# --- BZip2 ---
+if (HAVE_LIBBZ2)
   if (SIMCOUPE_PORTABLE)
     target_link_libraries(${PROJECT_NAME} PRIVATE libbz2.a)
   else()
     target_link_libraries(${PROJECT_NAME} PRIVATE BZip2::BZip2)
   endif()
-  set(HAVE_LIBBZ2 1)
 endif()
 
 message(STATUS "Fetching SAASound from GitHub")
@@ -285,8 +355,22 @@ endif()
 FetchContent_MakeAvailable(saasound)
 add_subdirectory(${saasound_SOURCE_DIR} ${saasound_BINARY_DIR} ${SAASOUND_EXCLUDE_FLAG})
 target_link_libraries(${PROJECT_NAME} PRIVATE SAASound)
-# TODO: remove once upstream is compatible
 target_include_directories(${PROJECT_NAME} PRIVATE ${saasound_SOURCE_DIR}/include)
+
+# --- ZLIB Linkage for SimCoupe ---
+if (HAVE_LIBZ)
+  if (SIMCOUPE_PORTABLE)
+    target_link_libraries(${PROJECT_NAME} PRIVATE libz.a)
+  else()
+    target_link_libraries(${PROJECT_NAME} PRIVATE ZLIB::ZLIB)
+  endif()
+  target_sources(${PROJECT_NAME} PRIVATE
+    Extern/zlib/contrib/minizip/ioapi.c
+    Extern/zlib/contrib/minizip/unzip.c
+    Extern/zlib/contrib/minizip/ioapi.h
+    Extern/zlib/contrib/minizip/unzip.h)
+  target_include_directories(${PROJECT_NAME} PRIVATE Extern/zlib/contrib/minizip)
+endif()
 
 if (EXISTS "${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/xaudio2redist/xaudio2.h")
   target_include_directories(${PROJECT_NAME} PRIVATE ${_VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include/xaudio2redist)

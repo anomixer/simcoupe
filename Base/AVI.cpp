@@ -438,6 +438,11 @@ bool IsRecording()
     return file != nullptr;
 }
 
+std::string GetLastPath()
+{
+    return avi_path;
+}
+
 void AddFrame(const FrameBuffer& fb)
 {
     if (!file || !want_video)

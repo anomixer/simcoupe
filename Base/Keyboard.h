@@ -36,8 +36,7 @@ extern std::array<uint8_t, 9> key_matrix;
 // Key constants used with the key macros above
 enum eSamKey
 {
-    SK_MIN = 0, SK_MINMINUS1 = SK_MIN - 1,
-    SK_SHIFT, SK_Z, SK_X, SK_C, SK_V, SK_F1, SK_F2, SK_F3,
+    SK_SHIFT = 0, SK_Z, SK_X, SK_C, SK_V, SK_F1, SK_F2, SK_F3,
     SK_A, SK_S, SK_D, SK_F, SK_G, SK_F4, SK_F5, SK_F6,
     SK_Q, SK_W, SK_E, SK_R, SK_T, SK_F7, SK_F8, SK_F9,
     SK_1, SK_2, SK_3, SK_4, SK_5, SK_ESCAPE, SK_TAB, SK_CAPS,
@@ -45,7 +44,8 @@ enum eSamKey
     SK_P, SK_O, SK_I, SK_U, SK_Y, SK_EQUALS, SK_QUOTES, SK_F0,
     SK_RETURN, SK_L, SK_K, SK_J, SK_H, SK_SEMICOLON, SK_COLON, SK_EDIT,
     SK_SPACE, SK_SYMBOL, SK_M, SK_N, SK_B, SK_COMMA, SK_PERIOD, SK_INV,
-    SK_CONTROL, SK_UP, SK_DOWN, SK_LEFT, SK_RIGHT, SK_NONE, SK_MAX = SK_NONE
+    SK_CONTROL, SK_UP, SK_DOWN, SK_LEFT, SK_RIGHT, SK_NONE, 
+    SK_MIN = SK_SHIFT, SK_MAX = SK_NONE, SK_MINMINUS1 = -1
 };
 
 enum eHostKey

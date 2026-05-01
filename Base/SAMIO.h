@@ -206,11 +206,11 @@ public:
 
 public:
     virtual void Reset() { }
+    virtual void Flush() { }
+    virtual void FrameEnd() { }
 
     virtual uint8_t In(uint16_t /*port*/) { return 0xff; }
     virtual void Out(uint16_t /*port*/, uint8_t /*val*/) { }
-
-    virtual void FrameEnd() { }
 
     virtual bool LoadState(const std::string&) { return true; }  // preserve basic state (such as NVRAM)
     virtual bool SaveState(const std::string&) { return true; }
@@ -230,7 +230,7 @@ public:
     virtual bool Insert(const std::string& disk_path) { return false; }
     virtual bool Insert(const std::vector<uint8_t>& mem_file) { return false; }
     virtual void Eject() { }
-    virtual void Flush() { }
+    void Flush() override { }
 
 public:
     virtual std::string DiskPath() const = 0;
@@ -238,9 +238,12 @@ public:
 
     virtual bool HasDisk() const { return false; }
     virtual bool IsLightOn() const { return false; }
+    virtual bool IsModified() const { return m_modified; }
+    virtual void ClearModified() { m_modified = false; }
     virtual bool IsActive() const { return m_uActive != 0; }
 
 protected:
+    bool m_modified = false;
     unsigned int m_uActive = 0; // active when non-zero, decremented by FrameEnd()
 };
 

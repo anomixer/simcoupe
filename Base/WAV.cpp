@@ -161,6 +161,11 @@ bool IsRecording()
     return file != nullptr;
 }
 
+std::string GetLastPath()
+{
+    return wav_path;
+}
+
 
 void AddFrame(const uint8_t* pb_, int nLen_)
 {

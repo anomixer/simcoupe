@@ -38,11 +38,18 @@ bool OSD::Init()
     SetErrorMode(SEM_FAILCRITICALERRORS);
 #endif
 
+    printf("OSD::Init: SDL_Init starting...\n");
+#ifdef __EMSCRIPTEN__
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_JOYSTICK | SDL_INIT_TIMER | SDL_INIT_EVENTS) < 0)
+#else
     if (SDL_Init(SDL_INIT_EVERYTHING) < 0)
+#endif
     {
+        printf("OSD::Init: SDL_Init failed: %s\n", SDL_GetError());
         Message(MsgType::Error, "SDL init failed: {}", SDL_GetError());
         return false;
     }
+    printf("OSD::Init: SDL_Init succeeded.\n");
 
     return true;
 }
@@ -109,15 +116,15 @@ std::string OSD::MakeFilePath(PathType type, const std::string& filename)
         break;
 
     case PathType::Resource:
-#if defined(__APPLE__) && defined(HAVE_LIBSDL2)
+#ifdef __EMSCRIPTEN__
+        path = "/Resource";
+#elif defined(__APPLE__) && defined(HAVE_LIBSDL2)
         // Resources path in the app bundle
         if (auto pBasePath = SDL_GetBasePath())
         {
             path = pBasePath;
             SDL_free(pBasePath);
         }
-#elif defined(__EMSCRIPTEN__)
-        path = "/Resource";
 #elif defined(RESOURCE_DIR) && !defined(__AMIGAOS4__)
         path = RESOURCE_DIR;
 

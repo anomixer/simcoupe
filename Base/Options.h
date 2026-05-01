@@ -31,7 +31,7 @@ struct Config
 
     bool tvaspect = true;               // TV pixel aspect ratio?
     bool fullscreen = false;            // Start in full-screen mode?
-    int visiblearea = 2;                // How much of the borders to show (2=TV Visible)
+    int visiblearea = 1;                // How much of the borders to show (1=Small Border)
     bool smooth = true;                 // Smooth image when stretching? (disables integer scaling)
     bool allowmotionblur = false;       // Motion blur looks awful without VRR, so hide/disable for now
     bool motionblur = false;            // Motion blur to reduce animation flicker?
@@ -39,6 +39,7 @@ struct Config
     int maxintensity = 255;             // Maximum colour channel intensity (0-255)
     bool blackborder = false;           // Black border around emulated screen?
     bool tryvrr = true;                 // Try to use Variable Refresh Rate, if supported?
+    bool usewebgl = true;               // Use WebGL 2.0 (GL3) rendering? (false = software/SDLTexture fallback)
 
     int gifframeskip = 0;               // GIF frameskip (0=50fps)
 

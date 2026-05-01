@@ -403,6 +403,11 @@ bool IsRecording()
     return file != nullptr;
 }
 
+std::string GetLastPath()
+{
+    return gif_path;
+}
+
 
 void AddFrame(const FrameBuffer& fb)
 {

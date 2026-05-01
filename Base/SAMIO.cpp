@@ -959,7 +959,7 @@ void AutoLoad(AutoLoadType type)
     if (type == AutoLoadType::Disk)
         Keyin::String("\xc9", false);
     else if (type == AutoLoadType::Tape)
-        Keyin::String("\xc7", false);
+        Keyin::String("\xc7\"\"\r", false);
 }
 
 void EiHook()

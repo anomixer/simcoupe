@@ -239,5 +239,16 @@ bool HDFHardDisk::ReadSector(unsigned int uSector_, uint8_t* pb_)
 bool HDFHardDisk::WriteSector(unsigned int uSector_, uint8_t* pb_)
 {
     off_t lOffset = m_uDataOffset + static_cast<off_t>(uSector_)* m_uSectorSize;
-    return m_file && !fseek(m_file, lOffset, SEEK_SET) && (fwrite(pb_, 1, m_uSectorSize, m_file) == m_uSectorSize);
+    if (m_file && !fseek(m_file, lOffset, SEEK_SET) && (fwrite(pb_, 1, m_uSectorSize, m_file) == m_uSectorSize))
+    {
+        m_modified = true;
+        return true;
+    }
+    return false;
+}
+
+void HDFHardDisk::Flush()
+{
+    if (m_file)
+        fflush(m_file);
 }

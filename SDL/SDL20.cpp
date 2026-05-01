@@ -57,8 +57,14 @@ bool SDLTexture::Init()
 
     SDL_SetWindowMinimumSize(m_window, Frame::Width() / 2, Frame::Height() / 2);
 
+    // WASM/浏览器环境：不使用 ACCELERATED 标志，因为浏览器不支持硬件加速
+#ifdef __EMSCRIPTEN__
+    m_renderer.reset(
+        SDL_CreateRenderer(m_window, -1, SDL_RENDERER_TARGETTEXTURE));
+#else
     m_renderer.reset(
         SDL_CreateRenderer(m_window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_TARGETTEXTURE));
+#endif
 
     if (!m_renderer)
         return false;

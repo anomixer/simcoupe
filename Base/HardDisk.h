@@ -39,8 +39,12 @@ public:
 public:
     bool IsSDIDEDisk();
     bool IsBDOSDisk(bool* pfByteSwapped = nullptr);
+    bool IsModified() const { return m_modified; }
+    void ClearModified() { m_modified = false; }
+    virtual void Flush() { }
 
 protected:
+    bool m_modified = false;
     std::string m_strPath;
 };
 
@@ -61,6 +65,7 @@ public:
 
     bool ReadSector(unsigned int uSector_, uint8_t* pb_) override;
     bool WriteSector(unsigned int uSector_, uint8_t* pb_) override;
+    void Flush() override;
 
 protected:
     unique_FILE m_file;

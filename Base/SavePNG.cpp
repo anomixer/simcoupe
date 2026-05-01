@@ -177,11 +177,12 @@ bool SaveFile(FILE* file, const FrameBuffer& fb)
 
 namespace PNG
 {
+static std::string png_path;
 
 bool Save(const FrameBuffer& fb)
 {
 #ifdef HAVE_LIBZ
-    auto png_path = Util::UniqueOutputPath("png");
+    png_path = Util::UniqueOutputPath("png");
     unique_FILE file = fopen(png_path.c_str(), "wb");
     if (file && SaveFile(file, fb))
     {
@@ -195,6 +196,11 @@ bool Save(const FrameBuffer& fb)
 #endif
 
     return false;
+}
+
+std::string GetLastPath()
+{
+    return png_path;
 }
 
 } // namespace PNG

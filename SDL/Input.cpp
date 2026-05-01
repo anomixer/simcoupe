@@ -476,13 +476,13 @@ void Input::Update()
 }
 
 
-int Input::MapChar(int nChar_, int* /*pnMods_*/)
+int Input::MapChar(int nChar_, int* pnMods_)
 {
-    // Regular characters details aren't known until the key press
-    if (nChar_ < HK_MIN)
-        return 0;
+    if (pnMods_)
+        *pnMods_ = 0;
 
-    if (nChar_ >= HK_MIN && nChar_ < HK_MAX)
+    // Regular characters are returned as-is
+    if (nChar_ < HK_MAX)
         return nChar_;
 
     return 0;

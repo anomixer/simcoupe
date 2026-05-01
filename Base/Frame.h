@@ -59,6 +59,7 @@ void SaveSSX();
 int Width();
 int Height();
 int AspectWidth();
+const FrameBuffer& Buffer();
 
 void SetStatus(std::string&& str);
 
