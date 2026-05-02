@@ -268,6 +268,7 @@ void Update()
     // Process the base key mappings
     ProcessUnshiftedKeys(asKeyMatrix);
 
+
     // Apply joystick 1 input if either device is mapped to it
     if (GetOption(joytype1) == jtJoystick1) key_matrix[4] &= ~Joystick::ReadSinclair2(0);
     if (GetOption(joytype2) == jtJoystick1) key_matrix[4] &= ~Joystick::ReadSinclair2(1);
@@ -391,7 +392,10 @@ static bool UpdateKeyTable(MAPPED_KEY* asKeys_, int nKey_, int nMods_, int nChar
 
             // Update the key mapping
             asKeys_[i].nKey = nKey_;
-            asKeys_[i].nMods = nMods_;
+
+            // Only update modifiers for non-matrix keys (asSamKeys, asSpectrumKeys)
+            if (asKeys_ != asKeyMatrix && nChar_ >= HK_MIN)
+                asKeys_[i].nMods = nMods_;
 
             return true;
         }

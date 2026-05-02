@@ -438,11 +438,6 @@ bool IsRecording()
     return file != nullptr;
 }
 
-std::string GetLastPath()
-{
-    return avi_path;
-}
-
 void AddFrame(const FrameBuffer& fb)
 {
     if (!file || !want_video)
@@ -581,6 +576,11 @@ void AddFrame(const uint8_t* buffer, unsigned int len)
     max_audio_size = std::max(audio_size, max_audio_size);
 
     want_video = true;
+}
+
+const std::string& GetLastPath()
+{
+    return avi_path;
 }
 
 } // namespace AVI

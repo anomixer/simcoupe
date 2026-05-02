@@ -403,11 +403,6 @@ bool IsRecording()
     return file != nullptr;
 }
 
-std::string GetLastPath()
-{
-    return gif_path;
-}
-
 
 void AddFrame(const FrameBuffer& fb)
 {
@@ -480,6 +475,11 @@ void AddFrame(const FrameBuffer& fb)
 
     auto pgc = std::make_unique<GifCompressor>();
     pgc->WriteDataBlocks(file, ww * wh, COLOUR_DEPTH);
+}
+
+const std::string& GetLastPath()
+{
+    return gif_path;
 }
 
 } // namespace GIF

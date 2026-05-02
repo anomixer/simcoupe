@@ -116,8 +116,6 @@ std::string OSD::MakeFilePath(PathType type, const std::string& filename)
             path = pBasePath;
             SDL_free(pBasePath);
         }
-#elif defined(__EMSCRIPTEN__)
-        path = "/Resource";
 #elif defined(RESOURCE_DIR) && !defined(__AMIGAOS4__)
         path = RESOURCE_DIR;
 

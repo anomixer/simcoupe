@@ -161,11 +161,6 @@ bool IsRecording()
     return file != nullptr;
 }
 
-std::string GetLastPath()
-{
-    return wav_path;
-}
-
 
 void AddFrame(const uint8_t* pb_, int nLen_)
 {
@@ -200,6 +195,12 @@ void AddFrame(const uint8_t* pb_, int nLen_)
         else
             Stop();
     }
+}
+
+const std::string& GetLastPath()
+{
+    static std::string empty;
+    return (nFrames > 0) ? wav_path : empty;
 }
 
 } // namespace WAV

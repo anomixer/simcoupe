@@ -188,7 +188,6 @@ static bool LoadRoms()
             rom_file = OSD::MakeFilePath(PathType::Resource, "atom.rom");
     }
 
-    printf("Memory: Attempting to load ROM from %s\n", rom_file.c_str());
     auto rom = Stream::Open(rom_file.c_str());
     if (!rom)
     {
@@ -213,7 +212,6 @@ static bool LoadRoms()
 
         bytes_read += rom->Read(pb0, MEM_PAGE_SIZE);
         bytes_read += rom->Read(pb1, MEM_PAGE_SIZE);
-        printf("Memory: Loaded %zu bytes from ROM file\n", bytes_read);
 
         // Accept raw images or ZX82 files starting with a DI instruction.
         constexpr size_t rom_image_size = MEM_PAGE_SIZE * 2;

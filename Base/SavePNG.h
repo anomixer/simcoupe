@@ -25,5 +25,5 @@
 namespace PNG
 {
 bool Save(const FrameBuffer& fb);
-std::string GetLastPath();
+const std::string& GetLastPath();
 }

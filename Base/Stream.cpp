@@ -50,7 +50,7 @@ Stream::Open(const std::string& file_path, bool read_only)
 #ifdef HAVE_LIBZ
     if (auto hfZip = unzOpen(file_path.c_str()))
     {
-        std::regex regex_types(R"(\.(dsk|sad|mgt|sbt|cpm|tap|tzx|csw|wav)$)", std::regex::extended | std::regex::icase);
+        std::regex regex_types(R"(\.(dsk|sad|mgt|sbt|cpm)$)", std::regex::extended | std::regex::icase);
 
         for (auto ret = unzGoToFirstFile(hfZip); ret == UNZ_OK; ret = unzGoToNextFile(hfZip))
         {

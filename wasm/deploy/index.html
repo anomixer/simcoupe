@@ -1,0 +1,1710 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SimCoupe WASM</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <style>
+        :root {
+            --menu-bg: #2d2d2d;
+            --menu-hover: #404040;
+            --menu-text: #e0e0e0;
+            --menu-accent: #0078d7;
+            --bg: #1e1e1e;
+            --surface: #252526;
+            --border: #333333;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0d0d0d;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+        }
+
+        /* Menu Bar Styling */
+        .menu-bar {
+            background-color: var(--menu-bg);
+            display: flex;
+            height: 30px;
+            align-items: center;
+            padding: 0 10px;
+            border-bottom: 1px solid var(--border);
+            user-select: none;
+            z-index: 1000;
+        }
+
+        .menu-item {
+            padding: 0 12px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            cursor: default;
+            position: relative;
+            font-size: 13px;
+        }
+
+        .menu-item:hover,
+        .menu-item.active {
+            background-color: var(--menu-hover);
+        }
+
+        /* Dropdown Styling */
+        .dropdown {
+            position: absolute;
+            top: 30px;
+            left: 0;
+            background-color: var(--menu-bg);
+            min-width: 180px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border);
+            display: none;
+            flex-direction: column;
+            padding: 4px 0;
+        }
+
+        .menu-item:hover>.dropdown {
+            display: flex;
+        }
+
+        .dropdown-item {
+            padding: 6px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+
+        .dropdown-item:hover {
+            background-color: var(--menu-accent);
+            color: white;
+        }
+
+        .dropdown-divider {
+            height: 1px;
+            background-color: var(--border);
+            margin: 4px 10px;
+        }
+
+        .shortcut {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-left: 20px;
+        }
+
+        /* Workspace Area */
+        .main-workspace {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0;
+            position: relative;
+            overflow: auto;
+        }
+
+        /* Custom Thin Scrollbar */
+        .main-workspace::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .main-workspace::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .main-workspace::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .main-workspace::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .canvas-container {
+            background: #000;
+            padding: 4px;
+            border: 1px solid var(--border);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            border-radius: 2px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-sizing: border-box;
+            transition: width 0.2s, height 0.2s;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            object-fit: contain;
+            outline: none;
+            background-color: #000;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background-color: var(--menu-accent);
+            height: 24px;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            color: white;
+            z-index: 100;
+            overflow: hidden;
+        }
+
+        .status-bar>div {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        #status-left {
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-center {
+            justify-content: center;
+            gap: 20px;
+        }
+
+        #status-right {
+            justify-content: flex-end;
+        }
+
+        .stat-item {
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @keyframes status-blink {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.3;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .status-loading {
+            animation: status-blink 1s infinite;
+            font-weight: bold;
+        }
+
+        /* Overlays */
+        #loading-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--surface);
+            border-bottom-color: var(--menu-accent);
+            border-radius: 50%;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        #splash-info a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            opacity: 0 !important;
+            pointer-events: none !important;
+            visibility: hidden !important;
+        }
+
+        .dropdown-item {
+            padding: 6px 12px 6px 30px;
+            cursor: pointer;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .dropdown-item .check {
+            position: absolute;
+            left: 8px;
+            display: none;
+        }
+
+        .dropdown-item.checked .check {
+            display: inline;
+        }
+
+        .dropdown-item-header {
+            padding: 4px 12px;
+            font-size: 11px;
+            font-weight: bold;
+            color: #888;
+            text-transform: uppercase;
+            background: rgba(255, 255, 255, 0.05);
+            pointer-events: none;
+        }
+
+        .dropdown-item.disabled {
+            color: #555;
+            pointer-events: none;
+            cursor: default;
+        }
+
+        .dropdown-item.disabled .shortcut {
+            color: #444;
+        }
+
+        .dropdown-divider.hidden {
+            display: none;
+        }
+
+        .dropdown-item-header.hidden {
+            display: none;
+        }
+
+        .secondary-section.hidden {
+            display: none;
+        }
+
+        /* About Modal Style */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background-color: #f0f0f0;
+            margin: 8% auto;
+            border: 1px solid #005a9e;
+            width: 360px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+        }
+
+        .modal-header {
+            background-color: #005a9e;
+            color: white;
+            padding: 4px 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .modal-close {
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .modal-close:hover {
+            background-color: #e81123;
+        }
+
+        .modal-body {
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .modal-body h2 {
+            margin: 0 0 10px 0;
+            font-size: 14px;
+            color: #000;
+        }
+
+        .modal-body a {
+            color: #005a9e;
+            text-decoration: underline;
+        }
+
+        .modal-body .credits {
+            margin-top: 15px;
+            text-align: center;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
+
+        /* Custom Modal Dialogs */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s ease, visibility 0.2s;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .modal-container {
+            background: #f0f0f0;
+            border: 1px solid #005a9e;
+            box-shadow: 8px 8px 0px rgba(0, 0, 0, 0.4);
+            width: 420px;
+            max-width: 90%;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            display: flex;
+            flex-direction: column;
+            animation: modalScale 0.2s ease-out;
+        }
+
+        @keyframes modalScale {
+            from {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(to right, #005a9e, #0078d4);
+            color: white;
+            padding: 8px 12px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-body {
+            padding: 20px;
+            font-size: 14px;
+            color: #333;
+            line-height: 1.5;
+            background: white;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .modal-footer {
+            padding: 12px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            background: #f0f0f0;
+        }
+
+        .modal-btn {
+            padding: 6px 20px;
+            min-width: 80px;
+            border: 1px solid #888;
+            background: #e1e1e1;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.1s;
+            outline: none;
+        }
+
+        .modal-btn:hover {
+            background: #d0d0d0;
+            border-color: #555;
+        }
+
+        .modal-btn:active {
+            background: #bbb;
+            transform: translateY(1px);
+        }
+
+        .modal-btn.primary {
+            background: #0078d4;
+            color: white;
+            border-color: #0054a6;
+        }
+
+        .modal-btn.primary:hover {
+            background: #005a9e;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Custom Modal Structure -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal-container">
+            <div id="modal-header" class="modal-header">
+                <span id="modal-title">SimCoupe</span>
+            </div>
+            <div id="modal-body" class="modal-body">
+                Message goes here.
+            </div>
+            <div id="modal-footer" class="modal-footer">
+                <!-- Buttons will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-overlay">
+        <div class="spinner"></div>
+        <p style="margin-top: 1rem;">Initialising SimCoupe Engine...</p>
+    </div>
+
+    <!-- Desktop Menu Bar -->
+    <div class="menu-bar">
+        <div class="menu-item">
+            File
+            <div class="dropdown">
+                <div class="dropdown-item" onclick="openFilePicker(0)">Insert Disk 1... <span class="shortcut">F1</span>
+                </div>
+                <div class="dropdown-item" onclick="insertDiskFromUrl(0)">Insert Disk 1 from URL...</div>
+                <div class="dropdown-item" id="eject-d1" onclick="ejectMedia(0)">Eject Disk 1</div>
+
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item-header">Disk 2 Type:</div>
+                <div class="dropdown-item opt-item" data-opt="interface" data-val="0" onclick="setInterface(0)"><span
+                        class="check">✓</span>Floppy</div>
+                <div class="dropdown-item opt-item" data-opt="interface" data-val="1" onclick="setInterface(1)"><span
+                        class="check">✓</span>Atom Classic</div>
+                <div class="dropdown-item opt-item" data-opt="interface" data-val="2" onclick="setInterface(2)"><span
+                        class="check">✓</span>Atom Lite</div>
+
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item-header" id="label-pri">Pri.:</div>
+                <div class="dropdown-item" onclick="openFilePicker(1)">Insert Disk... <span class="shortcut">F2</span>
+                </div>
+                <div class="dropdown-item" onclick="insertDiskFromUrl(1)">Insert Disk from URL...</div>
+                <div class="dropdown-item" id="eject-pri" onclick="ejectMedia(1)">Eject Disk</div>
+
+                <div class="dropdown-divider secondary-section"></div>
+                <div class="dropdown-item-header secondary-section" id="label-sec">Sec.:</div>
+                <div class="dropdown-item secondary-section" onclick="openFilePicker(3)">Insert Disk...</div>
+                <div class="dropdown-item secondary-section" onclick="insertDiskFromUrl(3)">Insert Disk from URL...
+                </div>
+                <div class="dropdown-item secondary-section" id="eject-sec" onclick="ejectMedia(3)">Eject Disk</div>
+
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="openFilePicker(2)">Insert Tape... <span class="shortcut">F3</span>
+                </div>
+                <div class="dropdown-item" onclick="insertDiskFromUrl(2)">Insert Tape from URL...</div>
+                <div class="dropdown-item" id="eject-tape" onclick="ejectMedia(2)">Eject Tape</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item"
+                    onclick="customConfirm('Close SimCoupe?', 'Exit', () => { window.open('', '_self', ''); window.close(); setTimeout(()=>{window.location.href='about:blank';}, 100); });">
+                    Exit</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            View
+            <div class="dropdown">
+                <div class="dropdown-item" onclick="toggleFullscreen()">Fullscreen <span class="shortcut">F8</span>
+                </div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" id="menu-scanline" onclick="doAction(Action.ToggleTV)"><span
+                        class="check">✓</span>TV Aspect Ratio <span class="shortcut">F5</span></div>
+                <div class="dropdown-item" id="menu-smoothing" onclick="doAction(Action.ToggleSmoothing)"><span
+                        class="check">✓</span>Smooth Image <span class="shortcut">F6</span></div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="status" onclick="toggleOption('status')"><span
+                        class="check">✓</span>Show Status Messages</div>
+                <div class="dropdown-item opt-item" data-opt="profile" onclick="toggleOption('profile')"><span
+                        class="check">✓</span>Show Emulation Speed</div>
+                <div class="dropdown-item opt-item" data-opt="drivelights" onclick="toggleOption('drivelights', 1, 0)">
+                    <span class="check">✓</span>Show Drive LEDs
+                </div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item zoom-item" data-zoom="0.5" onclick="setZoom(0.5)"><span
+                        class="check">✓</span>Window Zoom 50%</div>
+                <div class="dropdown-item zoom-item" data-zoom="1.0" onclick="setZoom(1.0)"><span
+                        class="check">✓</span>Window Zoom 100%</div>
+                <div class="dropdown-item zoom-item" data-zoom="2.0" onclick="setZoom(2.0)"><span
+                        class="check">✓</span>Window Zoom 200%</div>
+                <div class="dropdown-item zoom-item" data-zoom="3.0" onclick="setZoom(3.0)"><span
+                        class="check">✓</span>Window Zoom 300%</div>
+                <div class="dropdown-item zoom-item" data-zoom="4.0" onclick="setZoom(4.0)"><span
+                        class="check">✓</span>Window Zoom 400%</div>
+                <div class="dropdown-item zoom-item" data-zoom="5.0" onclick="setZoom(5.0)"><span
+                        class="check">✓</span>Window Zoom 500%</div>
+                <div class="dropdown-item zoom-item" data-zoom="0" onclick="setZoom(0)"><span class="check">✓</span>Fit
+                    to Window (Auto)</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item-header">Visible Area:</div>
+                <div class="dropdown-item varea-item" data-varea="0" onclick="setVisibleArea(0)"><span
+                        class="check">✓</span>No Border</div>
+                <div class="dropdown-item varea-item" data-varea="1" onclick="setVisibleArea(1)"><span
+                        class="check">✓</span>Small Border</div>
+                <div class="dropdown-item varea-item" data-varea="2" onclick="setVisibleArea(2)"><span
+                        class="check">✓</span>TV Visible</div>
+                <div class="dropdown-item varea-item" data-varea="3" onclick="setVisibleArea(3)"><span
+                        class="check">✓</span>Full Active</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="usewebgl" onclick="toggleOption('usewebgl')"><span
+                        class="check">✓</span>Use WebGL Acceleration</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            Record
+            <div class="dropdown">
+                <div class="dropdown-item" onclick="doAction(Action.RecordAvi)">Record AVI</div>
+                <div class="dropdown-item" id="stop-avi" onclick="doAction(Action.RecordAviStop)">Stop Recording AVI
+                </div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="doAction(Action.RecordWav)">Record WAV</div>
+                <div class="dropdown-item" id="stop-wav" onclick="doAction(Action.RecordWavStop)">Stop Recording WAV
+                </div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="doAction(Action.RecordGif)">Record GIF...</div>
+                <div class="dropdown-item" id="stop-gif" onclick="doAction(Action.RecordGifStop)">Stop Recording GIF
+                </div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="doAction(Action.SavePng)">Save Screenshot (PNG)</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            System
+            <div class="dropdown">
+                <div class="dropdown-item" id="menu-pause" onclick="doAction(Action.Pause)"><span
+                        class="check">✓</span>Pause / Resume <span class="shortcut">Pause</span></div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item speed-item" data-speed="50" onclick="setSpeed(50)"><span
+                        class="check">✓</span>Speed: 50%</div>
+                <div class="dropdown-item speed-item" data-speed="100" onclick="setSpeed(100)"><span
+                        class="check">✓</span>Speed: 100%</div>
+                <div class="dropdown-item speed-item" data-speed="200" onclick="setSpeed(200)"><span
+                        class="check">✓</span>Speed: 200%</div>
+                <div class="dropdown-item speed-item" data-speed="300" onclick="setSpeed(300)"><span
+                        class="check">✓</span>Speed: 300%</div>
+                <div class="dropdown-item speed-item" data-speed="500" onclick="setSpeed(500)"><span
+                        class="check">✓</span>Speed: 500%</div>
+                <div class="dropdown-item speed-item" data-speed="1000" onclick="setSpeed(1000)"><span
+                        class="check">✓</span>Speed: 1000%</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="doAction(Action.Nmi)">Generate NMI <span class="shortcut">F11</span>
+                </div>
+                <div class="dropdown-item" onclick="resetMachine()">Reset <span class="shortcut">F12</span></div>
+            </div>
+        </div>
+        <div class="menu-item" id="tool-menu">
+            Tool
+            <div class="dropdown">
+                <div class="dropdown-item opt-item" data-opt="mainmem" data-val="256"
+                    onclick="setOption('mainmem', 256)"><span class="check">✓</span>Memory: 256K</div>
+                <div class="dropdown-item opt-item" data-opt="mainmem" data-val="512"
+                    onclick="setOption('mainmem', 512)"><span class="check">✓</span>Memory: 512K</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="joytype1" data-val="0" onclick="setOption('joytype1', 0)">
+                    <span class="check">✓</span>Joystick: None
+                </div>
+                <div class="dropdown-item opt-item" data-opt="joytype1" data-val="1" onclick="setOption('joytype1', 1)">
+                    <span class="check">✓</span>Joystick: Keyboard 1
+                </div>
+                <div class="dropdown-item opt-item" data-opt="joytype1" data-val="2" onclick="setOption('joytype1', 2)">
+                    <span class="check">✓</span>Joystick: Keyboard 2
+                </div>
+                <div class="dropdown-item opt-item" data-opt="joytype1" data-val="3" onclick="setOption('joytype1', 3)">
+                    <span class="check">✓</span>Joystick: Kempston
+                </div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="sid" data-val="0" onclick="setOption('sid', 0)"><span
+                        class="check">✓</span>SID: None</div>
+                <div class="dropdown-item opt-item" data-opt="sid" data-val="1" onclick="setOption('sid', 1)"><span
+                        class="check">✓</span>SID: MOS 6581</div>
+                <div class="dropdown-item opt-item" data-opt="sid" data-val="2" onclick="setOption('sid', 2)"><span
+                        class="check">✓</span>SID: MOS 8580</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="voicebox" onclick="toggleOption('voicebox')"><span
+                        class="check">✓</span>Enable VoiceBox</div>
+                <div class="dropdown-item opt-item" data-opt="dac7c" data-val="0" onclick="setOption('dac7c', 0)"><span
+                        class="check">✓</span>DAC: None</div>
+                <div class="dropdown-item opt-item" data-opt="dac7c" data-val="1" onclick="setOption('dac7c', 1)"><span
+                        class="check">✓</span>DAC: BlueAlpha</div>
+                <div class="dropdown-item opt-item" data-opt="dac7c" data-val="2" onclick="setOption('dac7c', 2)"><span
+                        class="check">✓</span>DAC: SAMVox</div>
+                <div class="dropdown-item opt-item" data-opt="dac7c" data-val="3" onclick="setOption('dac7c', 3)"><span
+                        class="check">✓</span>DAC: Paula (Amiga)</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="turbodisk" onclick="toggleOption('turbodisk')"><span
+                        class="check">✓</span>Turbo Disk Access</div>
+                <div class="dropdown-item opt-item" data-opt="dosboot" onclick="toggleOption('dosboot')"><span
+                        class="check">✓</span>Auto-boot DOS</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="turbotape" onclick="toggleOption('turbotape')"><span
+                        class="check">✓</span>Turbo Tape Loading</div>
+                <div class="dropdown-item opt-item" data-opt="tapetraps" onclick="toggleOption('tapetraps')"><span
+                        class="check">✓</span>Tape Traps (Instant)</div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item opt-item" data-opt="fastreset" onclick="toggleOption('fastreset')"><span
+                        class="check">✓</span>Fast Reset (Skip Test)</div>
+                <div class="dropdown-item opt-item" data-opt="asicdelay" onclick="toggleOption('asicdelay')"><span
+                        class="check">✓</span>Enforce ASIC Delay</div>
+            </div>
+        </div>
+        <div class="menu-item">
+            Help
+            <div class="dropdown">
+                <div class="dropdown-item"
+                    onclick="window.open('https://github.com/anomixer/simcoupe/blob/main/Manual.md', '_blank')">General
+                </div>
+                <div class="dropdown-divider"></div>
+                <div class="dropdown-item" onclick="showAbout()">About SimCoupe...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-workspace">
+        <div class="canvas-container">
+            <canvas id="canvas" width="512" height="192" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div id="status-left">Ready</div>
+        <div class="status-center">
+            <span id="stat-d1" class="stat-item">D1: Empty</span>
+            <span id="stat-d2" class="stat-item">D2: Empty</span>
+            <span id="stat-sec" class="stat-item secondary-section hidden">Sec: Empty</span>
+            <span id="stat-tape" class="stat-item">Tape: Empty</span>
+        </div>
+        <div id="status-right">
+            <span id="stat-fps">50 FPS</span>
+        </div>
+    </div>
+
+    <input type="file" id="file-input" style="display: none;" accept=".dsk,.tap,.sad,.mgt,.zip,.gz,.tzx,.hdf,.7z">
+
+    <!-- About Modal -->
+    <div id="aboutModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>About SimCoupe</span>
+                <span class="modal-close" onclick="closeAbout()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <img src="favicon.png" style="width:32px; vertical-align:middle; margin-right:15px;">
+                    <img src="logo.png" style="vertical-align:middle;">
+                </div>
+                <div style="border-top: 1px solid #ccc; margin: 10px 0; padding-top: 10px;"></div>
+                <h2 style="margin:0;">SimCoupe v1.2.15 Web version 2026-04-09</h2>
+                <p><a href="https://github.com/anomixer/simcoupe"
+                        target="_blank">https://github.com/anomixer/simcoupe</a></p>
+                <p style="margin:5px 0;">CORS Proxy by <a href="https://corsfix.com" target="_blank">Corsfix</a></p>
+
+                <div class="credits">
+                    <p style="margin:4px 0;"><strong>Based on Win32/SDL versions:</strong><br>Simon Owen
+                        &lt;simon@simonowen.com&gt;<br><a href="https://github.com/simonowen/simcoupe"
+                            target="_blank">https://github.com/simonowen/simcoupe</a></p>
+                    <p style="margin:4px 0;"><strong>Based on original DOS/X versions by:</strong><br>Allan Skillman</p>
+                    <p style="margin:4px 0;"><strong>CPU contention and sound enhancements:</strong><br>Dave Laundon</p>
+                    <p style="margin:4px 0;"><strong>Philips SAA 1099 sound chip emulation:</strong><br>Dave Hopper</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type='text/javascript'>
+        // URL Interface override check (Must be at the very top of the script)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('interface')) {
+            const itf = urlParams.get('interface').toLowerCase();
+            let targetItf = -1;
+            if (itf === 'floppy' || itf === '0') targetItf = 0;
+            else if (itf === 'atom' || itf === '1') targetItf = 1;
+            else if (itf === 'atomlite' || itf === '2') targetItf = 2;
+
+            if (targetItf !== -1) {
+                const currentItf = parseInt(localStorage.getItem('simcoupe_interface') || "0");
+                if (currentItf !== targetItf) {
+                    localStorage.setItem('simcoupe_interface', targetItf);
+                    location.reload(); // Reload to apply new ROM/Interface
+                }
+            }
+        }
+
+        var statusLeft = document.getElementById('status-left');
+        var overlay = document.getElementById('loading-overlay');
+        var fileInput = document.getElementById('file-input');
+        var targetType = 0; // 0: D1, 1: D2, 2: Tape
+
+        // Action IDs from Actions.h
+        var Action = {
+            RecordAvi: 22,
+            RecordAviStop: 24,
+            SavePng: 14,
+            ToggleTV: 19,
+            ToggleSmoothing: 20,
+            ToggleMotionBlur: 21,
+            RecordWav: 30,
+            RecordWavStop: 32,
+            RecordGif: 25,
+            RecordGifStop: 29,
+            SpeedNormal: 33,
+            SpeedTurbo: 36,
+            RecordGifStop: 29,
+            Reset: 38,
+            Nmi: 39,
+            Pause: 40,
+            ToggleTurbo: 37,
+            SpeedNormal: 33,
+            SpeedTurbo: 36,
+            Options: 43,
+            Debugger: 44,
+            About: 45,
+            ToggleRasterDebug: 48
+        };
+
+        function showAbout() { document.getElementById('aboutModal').style.display = 'block'; }
+        function closeAbout() { document.getElementById('aboutModal').style.display = 'none'; }
+        window.onclick = function (event) { if (event.target == document.getElementById('aboutModal')) closeAbout(); }
+
+        var mediaNames = ["", "", "", ""];
+        var isRecordingAvi = false;
+        var isRecordingWav = false;
+        var isRecordingGif = false;
+        var statElements = [
+            document.getElementById('stat-d1'),
+            document.getElementById('stat-d2'),
+            document.getElementById('stat-tape'),
+            document.getElementById('stat-sec')
+        ];
+
+        // Audio Context handling for modern browsers (AutoPlay Policy)
+        function resumeAudio() {
+            if (typeof SDL_AudioContext !== 'undefined' && SDL_AudioContext.state === 'suspended') {
+                SDL_AudioContext.resume().then(() => {
+                    console.log("AudioContext resumed successfully.");
+                });
+            }
+        }
+
+        // Resume audio on first interaction (click or key)
+        window.addEventListener('mousedown', resumeAudio, { once: true });
+        window.addEventListener('keydown', resumeAudio, { once: true });
+
+        function hideSplashAndStartAudio() {
+            closeAbout();
+            try { Module.ccall('EMS_StartAudio', null, [], []); } catch (e) { }
+        }
+
+        var Module = {
+            arguments: (function () {
+                var args = [];
+                var savedWebGL = localStorage.getItem('simcoupe_usewebgl');
+                if (savedWebGL !== null) {
+                    args.push("-usewebgl", savedWebGL);
+                }
+
+                var savedInterface = localStorage.getItem('simcoupe_interface');
+                if (savedInterface === "1") {
+                    args.push("-rom", "/Resource/atom.rom", "-drive2", "2");
+                } else if (savedInterface === "2") {
+                    args.push("-rom", "/Resource/atomlite.rom", "-drive2", "3");
+                } else {
+                    args.push("-rom", "/Resource/samcoupe.rom", "-drive2", "1");
+                }
+
+                return args;
+            })(),
+            preRun: [],
+            postRun: [],
+            print: function (text) {
+                console.log(text);
+                if (text.includes("Main::Init: Success!")) {
+                    overlay.classList.add('hidden');
+
+                    var isFirstLoad = !sessionStorage.getItem('simcoupe_initialized');
+                    statusLeft.innerText = 'Running';
+
+                    if (isFirstLoad) {
+                        showAbout();
+                        sessionStorage.setItem('simcoupe_initialized', 'true');
+                    } else {
+                        // Hide audio prompt on reloads to keep it clean
+                        document.getElementById('audio-prompt').classList.add('hidden');
+                    }
+
+                    setTimeout(() => {
+                        document.getElementById('canvas').focus();
+
+                        // Sync usewebgl from localStorage if exists
+                        var savedWebGL = localStorage.getItem('simcoupe_usewebgl');
+                        if (savedWebGL !== null) {
+                            Module.ccall('EMS_SetOption', null, ['string', 'number'], ['usewebgl', parseInt(savedWebGL)]);
+                        }
+
+                        updateMenuChecks();
+                        setZoom(0); // Default to Fit to Window (Auto)
+
+                        // Aggressive sync for the first few seconds to ensure UI matches engine
+                        let syncCount = 0;
+                        const syncInterval = setInterval(() => {
+                            updateMenuChecks();
+                            syncCount++;
+                            if (syncCount > 20) clearInterval(syncInterval); // Stop after 4 seconds (20 * 200ms)
+                        }, 200);
+
+                        // Check for URL parameters: ?d1=...&d2=...&d3=...&tape=...
+                        const urlParams = new URLSearchParams(window.location.search);
+                        if (urlParams.has('d1')) loadFromUrl(0, urlParams.get('d1'));
+                        if (urlParams.has('d2')) loadFromUrl(1, urlParams.get('d2'));
+                        if (urlParams.has('d3')) loadFromUrl(3, urlParams.get('d3'));
+                        if (urlParams.has('tape')) loadFromUrl(2, urlParams.get('tape'));
+
+                    }, 500);
+
+                    if (isFirstLoad) {
+                        setTimeout(() => {
+                            closeAbout();
+                            document.getElementById('audio-prompt').classList.add('hidden');
+                        }, 5000);
+                    }
+                }
+            },
+            canvas: (function () {
+                var canvas = document.getElementById('canvas');
+                canvas.addEventListener('click', () => {
+                    canvas.focus();
+                    hideSplashAndStartAudio();
+                });
+                return canvas;
+            })(),
+            setStatus: function (text) { if (!text) overlay.classList.add('hidden'); }
+        };
+
+        function doAction(id) {
+            // Track recording states
+            if (id === Action.RecordAvi) isRecordingAvi = true;
+            if (id === Action.RecordAviStop) isRecordingAvi = false;
+            if (id === Action.RecordWav) isRecordingWav = true;
+            if (id === Action.RecordWavStop) isRecordingWav = false;
+            if (id === Action.RecordGif) isRecordingGif = true;
+            if (id === Action.RecordGifStop) isRecordingGif = false;
+
+            Module.ccall('EMS_DoAction', null, ['number'], [id]);
+
+            if (id === Action.Pause || id === Action.ToggleTV || id === Action.ToggleSmoothing ||
+                id === Action.ToggleTurbo || id === Action.SpeedNormal || id === Action.SpeedTurbo ||
+                id === Action.RecordAvi || id === Action.RecordAviStop ||
+                id === Action.RecordWav || id === Action.RecordWavStop ||
+                id === Action.RecordGif || id === Action.RecordGifStop) {
+                updateMenuChecks();
+            }
+
+            // Handle WAV recording download on stop
+            if (id === Action.RecordWavStop) {
+                setTimeout(() => {
+                    var path = Module.ccall('EMS_GetLastWavPath', 'string', [], []);
+                    if (path && path.length > 0) {
+                        downloadVfsFile(path);
+                        statusLeft.innerText = 'WAV recording saved and downloading...';
+                    }
+                }, 500);
+            }
+
+            // Handle GIF recording download on stop
+            if (id === Action.RecordGifStop) {
+                setTimeout(() => {
+                    var path = Module.ccall('EMS_GetLastGifPath', 'string', [], []);
+                    if (path && path.length > 0) {
+                        downloadVfsFile(path);
+                        statusLeft.innerText = 'GIF recording saved and downloading...';
+                    }
+                }, 500);
+            }
+
+            // Handle AVI recording download on stop
+            if (id === Action.RecordAviStop) {
+                setTimeout(() => {
+                    var path = Module.ccall('EMS_GetLastAviPath', 'string', [], []);
+                    if (path && path.length > 0) {
+                        downloadVfsFile(path);
+                        statusLeft.innerText = 'AVI recording saved and downloading...';
+                    }
+                }, 500);
+            }
+
+            // Handle PNG screenshot download immediately
+            if (id === Action.SavePng) {
+                setTimeout(() => {
+                    var path = Module.ccall('EMS_GetLastPngPath', 'string', [], []);
+                    if (path && path.length > 0) {
+                        downloadVfsFile(path);
+                        statusLeft.innerText = 'Screenshot saved and downloading...';
+                    }
+                }, 500);
+            }
+
+            if (id === Action.ToggleTV || id === Action.ToggleSmoothing) {
+                updateMenuChecks();
+            }
+        }
+
+        function updateMenuChecks() {
+            if (typeof Module.ccall !== 'function') return;
+
+            try {
+                var scanline = Module.ccall('EMS_GetOption', 'number', ['string'], ['tvaspect']);
+                var smoothing = Module.ccall('EMS_GetOption', 'number', ['string'], ['smooth']);
+                var pause = Module.ccall('EMS_GetOption', 'number', ['string'], ['pause']);
+                var turbo = Module.ccall('EMS_GetOption', 'number', ['string'], ['turbo']);
+
+                if (scanline) document.getElementById('menu-scanline').classList.add('checked');
+                else document.getElementById('menu-scanline').classList.remove('checked');
+
+                if (smoothing) document.getElementById('menu-smoothing').classList.add('checked');
+                else document.getElementById('menu-smoothing').classList.remove('checked');
+
+                if (pause) document.getElementById('menu-pause').classList.add('checked');
+                else document.getElementById('menu-pause').classList.remove('checked');
+
+                var speedVal = Module.ccall('EMS_GetOption', 'number', ['string'], ['speed']);
+                document.querySelectorAll('.speed-item').forEach(item => {
+                    if (parseInt(item.getAttribute('data-speed')) === speedVal) {
+                        item.classList.add('checked');
+                    } else {
+                        item.classList.remove('checked');
+                    }
+                });
+
+                // Generic Options Sync
+                var items = document.querySelectorAll('.opt-item');
+                var savedInterface = parseInt(localStorage.getItem('simcoupe_interface') || "0");
+
+                items.forEach(item => {
+                    var opt = item.getAttribute('data-opt');
+                    var val = item.getAttribute('data-val');
+
+                    if (opt === 'interface') {
+                        if (parseInt(val) === savedInterface) item.classList.add('checked');
+                        else item.classList.remove('checked');
+                    } else {
+                        var current = Module.ccall('EMS_GetOption', 'number', ['string'], [opt]);
+                        if (val !== null) {
+                            if (parseInt(val) === current) item.classList.add('checked');
+                            else item.classList.remove('checked');
+                        } else {
+                            if (current) item.classList.add('checked');
+                            else item.classList.remove('checked');
+                        }
+                    }
+                });
+
+                // Handle Secondary Master visibility and grey-out
+                var secItems = document.querySelectorAll('.secondary-section');
+                if (savedInterface === 0) {
+                    // Floppy mode: Hide labels, Grey out secondary
+                    document.getElementById('label-pri').classList.add('hidden');
+                    document.getElementById('label-sec').classList.add('hidden');
+
+                    secItems.forEach(item => {
+                        item.classList.add('disabled');
+                        if (item.tagName === 'DIV' && item.classList.contains('dropdown-divider')) {
+                            item.classList.add('hidden');
+                        }
+                    });
+
+                    document.getElementById('stat-d2').innerText = mediaNames[1] ? ("D2: " + truncatePath(mediaNames[1])) : "D2: Empty";
+                    document.getElementById('stat-sec').classList.add('hidden');
+                } else {
+                    // Atom mode: Show labels, Enable secondary
+                    document.getElementById('label-pri').classList.remove('hidden');
+                    document.getElementById('label-sec').classList.remove('hidden');
+
+                    secItems.forEach(item => {
+                        item.classList.remove('disabled');
+                        item.classList.remove('hidden');
+                    });
+
+                    var label = (savedInterface === 1) ? "Pri: " : "Pri: "; // Both Atom and AtomLite use Pri label
+                    document.getElementById('stat-d2').innerText = mediaNames[1] ? (label + truncatePath(mediaNames[1])) : label + "Empty";
+                    document.getElementById('stat-sec').classList.remove('hidden');
+                }
+
+                // Grey out Eject items if no media is loaded
+                if (mediaNames[0]) document.getElementById('eject-d1').classList.remove('disabled');
+                else document.getElementById('eject-d1').classList.add('disabled');
+
+                if (mediaNames[1]) document.getElementById('eject-pri').classList.remove('disabled');
+                else document.getElementById('eject-pri').classList.add('disabled');
+
+                if (mediaNames[3]) document.getElementById('eject-sec').classList.remove('disabled');
+                else document.getElementById('eject-sec').classList.add('disabled');
+
+                if (mediaNames[2]) document.getElementById('eject-tape').classList.remove('disabled');
+                else document.getElementById('eject-tape').classList.add('disabled');
+
+                // Grey out Stop Recording items if not recording
+                if (isRecordingAvi) document.getElementById('stop-avi').classList.remove('disabled');
+                else document.getElementById('stop-avi').classList.add('disabled');
+
+                if (isRecordingWav) document.getElementById('stop-wav').classList.remove('disabled');
+                else document.getElementById('stop-wav').classList.add('disabled');
+
+                if (isRecordingGif) document.getElementById('stop-gif').classList.remove('disabled');
+                else document.getElementById('stop-gif').classList.add('disabled');
+
+                // Update Visible Area checkmarks
+                var vareaVal = Module.ccall('EMS_GetOption', 'number', ['string'], ['visiblearea']);
+                document.querySelectorAll('.varea-item').forEach(item => {
+                    if (parseInt(item.getAttribute('data-varea')) === vareaVal) {
+                        item.classList.add('checked');
+                    } else {
+                        item.classList.remove('checked');
+                    }
+                });
+
+            } catch (e) { }
+        }
+
+        function setVisibleArea(val) {
+            Module.ccall('EMS_SetOption', null, ['string', 'number'], ['visiblearea', val]);
+            updateMenuChecks();
+            // Changing visible area often requires a canvas resize or layout sync
+            setZoom(currentZoom);
+        }
+
+        function clearUrlParams() {
+            if (window.location.search.length > 0) {
+                window.history.replaceState({}, '', window.location.pathname);
+            }
+        }
+
+        function setInterface(type) {
+            var current = parseInt(localStorage.getItem('simcoupe_interface') || "0");
+            if (current === type) return;
+
+            customConfirm('Changing the hardware interface requires restarting the emulator. Apply changes and restart now?', 'Restart Required', () => {
+                clearUrlParams();
+                localStorage.setItem('simcoupe_interface', type);
+                window.location.reload();
+            });
+        }
+
+        function setOption(name, value) {
+            Module.ccall('EMS_SetOption', null, ['string', 'number'], [name, value]);
+            updateMenuChecks();
+            if (name === 'mainmem') {
+                statusLeft.innerText = 'Memory changed to ' + value + 'K (Reset recommended)';
+            }
+        }
+
+        function toggleOption(name, onVal = 1, offVal = 0) {
+            var current = Module.ccall('EMS_GetOption', 'number', ['string'], [name]);
+            var next = current ? offVal : onVal;
+
+            if (name === 'usewebgl') {
+                customConfirm('Changing the rendering backend requires restarting the emulator. Apply changes and restart now?', 'Restart Required', () => {
+                    localStorage.setItem('simcoupe_usewebgl', next);
+                    window.location.reload();
+                }, () => {
+                    // No callback
+                    updateMenuChecks(); // This will sync checkbox back
+                });
+                return;
+            }
+
+            Module.ccall('EMS_SetOption', null, ['string', 'number'], [name, next]);
+            updateMenuChecks();
+        }
+
+        function setSpeed(factor) {
+            Module.ccall('EMS_SetOption', null, ['string', 'number'], ['speed', factor]);
+            statusLeft.innerText = 'Speed: ' + factor + '%';
+            updateMenuChecks();
+        }
+
+        var currentZoom = 0; // Default to Fit to Window (Auto)
+        function setZoom(factor) {
+            var canvas = document.getElementById('canvas');
+            var container = canvas.parentElement;
+            currentZoom = factor;
+
+            if (factor === 0) {
+                // Fit to Window: Fill the workspace as much as possible
+                container.style.width = '100%';
+                container.style.height = '100%';
+                container.style.maxWidth = '100%';
+                container.style.maxHeight = '100%';
+                canvas.style.width = '100%';
+                canvas.style.height = '100%';
+                canvas.style.maxWidth = '100%';
+                canvas.style.maxHeight = '100%';
+            } else {
+                // Fixed Scale
+                container.style.width = 'auto';
+                container.style.height = 'auto';
+                container.style.maxWidth = 'none';
+                container.style.maxHeight = 'none';
+                
+                // Use internal resolution if possible, otherwise fallback to 800
+                var baseWidth = canvas.width || 800;
+                var targetWidth = baseWidth * factor;
+                canvas.style.width = targetWidth + 'px';
+                canvas.style.height = 'auto';
+                canvas.style.maxWidth = 'none';
+                canvas.style.maxHeight = 'none';
+            }
+            updateZoomCheck();
+        }
+
+        window.addEventListener('resize', () => {
+            if (currentZoom === 0) {
+                setZoom(0);
+            }
+        });
+
+        function updateZoomCheck() {
+            var items = document.querySelectorAll('.zoom-item');
+            items.forEach(item => {
+                if (parseFloat(item.getAttribute('data-zoom')) === currentZoom) {
+                    item.classList.add('checked');
+                } else {
+                    item.classList.remove('checked');
+                }
+            });
+        }
+
+        // Periodic sync: Check internal emulator state every 500ms 
+        // to sync UI checkmarks even if toggled via keyboard shortcuts (F5, F6, etc.)
+        setInterval(() => {
+            updateMenuChecks();
+            updateZoomCheck();
+        }, 500);
+
+        /* Custom Modal Implementation */
+        function showModal(title, message, buttons) {
+            const overlay = document.getElementById('modal-overlay');
+            const titleEl = document.getElementById('modal-title');
+            const bodyEl = document.getElementById('modal-body');
+            const footerEl = document.getElementById('modal-footer');
+
+            titleEl.innerText = title || 'SimCoupe';
+            bodyEl.innerHTML = message;
+            footerEl.innerHTML = '';
+
+            buttons.forEach(btn => {
+                const button = document.createElement('button');
+                button.innerText = btn.text;
+                button.className = 'modal-btn' + (btn.primary ? ' primary' : '');
+                button.onclick = () => {
+                    overlay.classList.remove('active');
+                    if (btn.callback) btn.callback();
+                };
+                footerEl.appendChild(button);
+            });
+
+            overlay.classList.add('active');
+
+            // Focus primary button if exists
+            setTimeout(() => {
+                const primary = footerEl.querySelector('.primary');
+                if (primary) primary.focus();
+            }, 100);
+        }
+
+        function customAlert(message, title = 'SimCoupe', callback = null) {
+            showModal(title, message, [
+                { text: 'OK', primary: true, callback: callback }
+            ]);
+        }
+
+        function customConfirm(message, title = 'SimCoupe', yesCallback = null, noCallback = null) {
+            showModal(title, message, [
+                { text: 'Yes', primary: true, callback: yesCallback },
+                { text: 'No', primary: false, callback: noCallback }
+            ]);
+        }
+
+        function customPrompt(message, title = 'SimCoupe', defaultValue = '', callback = null) {
+            const promptHtml = `
+            <div style="margin-bottom: 10px;">${message}</div>
+            <input type="text" id="modal-input" style="width: 100%; padding: 6px; border: 1px solid #ccc; box-sizing: border-box;" value="${defaultValue}">
+        `;
+            showModal(title, promptHtml, [
+                {
+                    text: 'OK', primary: true, callback: () => {
+                        const val = document.getElementById('modal-input').value;
+                        if (callback) callback(val);
+                    }
+                },
+                {
+                    text: 'Cancel', primary: false, callback: () => {
+                        if (callback) callback(null);
+                    }
+                }
+            ]);
+
+            // Focus input
+            setTimeout(() => {
+                const input = document.getElementById('modal-input');
+                if (input) {
+                    input.focus();
+                    input.select();
+                    // Stop propagation to prevent SDL from capturing keys
+                    const stopProp = (e) => e.stopPropagation();
+                    input.onkeydown = (e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') {
+                            document.querySelector('.modal-btn.primary').click();
+                        }
+                    };
+                    input.onkeyup = stopProp;
+                    input.onkeypress = stopProp;
+                }
+            }, 150);
+        }
+
+        function truncatePath(path, maxLen = 32) {
+            if (!path || path.length <= maxLen) return path;
+            var partLen = Math.floor((maxLen - 3) / 2);
+            return path.substring(0, partLen) + "..." + path.substring(path.length - partLen);
+        }
+
+        function downloadVfsFile(path) {
+            try {
+                var data = FS.readFile(path);
+                var ext = path.split('.').pop().toLowerCase();
+                var mime = 'application/octet-stream';
+                if (ext === 'wav') mime = 'audio/wav';
+                else if (ext === 'gif') mime = 'image/gif';
+                else if (ext === 'png') mime = 'image/png';
+                else if (ext === 'avi') mime = 'video/x-msvideo';
+
+                var blob = new Blob([data], { type: mime });
+                var url = window.URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                // Get filename from path
+                var filename = path.split('/').pop() || ('capture.' + ext);
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (e) {
+                console.error("Failed to download VFS file:", e);
+            }
+        }
+
+        function openFilePicker(type) {
+            targetType = type;
+            var savedInterface = parseInt(localStorage.getItem('simcoupe_interface') || "0");
+
+            // If Atom mode and target is Disk 2 (Pri/Sec), restrict to HDF or 7z
+            if (savedInterface > 0 && (type === 1 || type === 3)) {
+                fileInput.accept = ".hdf,.zip,.gz,.7z";
+            } else if (type === 2) {
+                fileInput.accept = ".tap,.tzx,.zip,.gz,.7z";
+            } else {
+                fileInput.accept = ".dsk,.sad,.mgt,.zip,.gz,.7z";
+            }
+
+            fileInput.click();
+        }
+
+        function ejectMedia(type) {
+            var savedInterface = parseInt(localStorage.getItem('simcoupe_interface') || "0");
+
+            const performEject = () => {
+                if (type === 0 || type === 1 || type === 3) {
+                    Module.ccall('EMS_EjectDisk', null, ['number'], [type]);
+                } else {
+                    Module.ccall('EMS_EjectTape', null, [], []);
+                }
+                mediaNames[type] = "";
+
+                if (type === 0) {
+                    statElements[0].innerText = 'D1: Empty';
+                } else if (type === 1) {
+                    var label = (savedInterface === 0) ? 'D2: ' : 'Pri: ';
+                    statElements[1].innerText = label + 'Empty';
+                } else if (type === 3) {
+                    statElements[3].innerText = 'Sec: Empty';
+                } else if (type === 2) {
+                    statElements[2].innerText = 'Tape: Empty';
+                }
+
+                statusLeft.innerText = 'Media ejected';
+                updateMenuChecks();
+            };
+
+            if (type === 0 || type === 1 || type === 3) {
+                // Check if modified
+                var isModified = Module.ccall('EMS_IsDiskModified', 'number', ['number'], [type]);
+                if (isModified) {
+                    var driveLabel = (type === 0) ? "Disk 1" : (type === 1) ? (savedInterface === 0 ? "Disk 2" : "Primary Master") : "Secondary Master";
+                    customConfirm('The ' + driveLabel + ' image (' + mediaNames[type] + ') has been modified. Do you want to save the changes to your computer before ejecting?', 'Save Changes?', () => {
+                        // Flush to VFS first
+                        Module.ccall('EMS_FlushDisk', null, ['number'], [type]);
+                        // Download from VFS
+                        var path = "/tmp/" + mediaNames[type];
+                        downloadVfsFile(path);
+                        // Clear modified flag
+                        Module.ccall('EMS_ClearDiskModified', null, ['number'], [type]);
+                        performEject();
+                    }, () => {
+                        performEject();
+                    });
+                    return;
+                }
+            }
+
+            performEject();
+        }
+
+        function resetMachine() { Module.ccall('EMS_Reset', null, [], []); }
+        function bootMachine() { /* Logic handled by Numpad 9 in engine, but can trigger via ccall if needed */ }
+        function toggleFullscreen() { document.getElementById('canvas').requestFullscreen(); }
+
+        function insertDiskFromUrl(type) {
+            customPrompt("Enter the URL of the disk/tape image (e.g., https://example.com/game.dsk):", "Insert from URL", "", (url) => {
+                if (url) loadFromUrl(type, url);
+            });
+        }
+
+        async function loadFromUrl(type, url) {
+            if (!url) return;
+            statusLeft.innerText = 'Downloading from URL...';
+            statusLeft.classList.add('status-loading');
+            try {
+                let response;
+                try {
+                    // Try 1: Direct
+                    response = await fetch(url);
+                } catch (e) {
+                    console.warn("Direct fetch failed, trying CORS proxy (corsfix.com)...", e);
+                    // Try 2: Proxy - Use raw URL as corsfix expects it
+                    const proxyUrl = 'https://proxy.corsfix.com/?' + url;
+                    response = await fetch(proxyUrl, { headers: { "x-corsfix-cache": "1h" } });
+                }
+
+                if (!response.ok) throw new Error('Network response was not ok');
+
+                const buffer = await response.arrayBuffer();
+                let data = new Uint8Array(buffer);
+
+                // Extract filename from URL or use a default
+                const urlObj = new URL(url);
+                let filename = urlObj.pathname.split('/').pop() || 'remote_disk.dsk';
+
+                const isArchive = filename.toLowerCase().match(/\.(7z|zip|gz)$/);
+                if (isArchive) {
+                    try {
+                        console.log('Archive: Initializing 7z-wasm for remote file:', filename);
+                        statusLeft.innerText = 'Initializing extraction engine...';
+
+                        const SevenZipWasm = (await import('https://cdn.jsdelivr.net/npm/7z-wasm@1.2.0/+esm')).default;
+                        const sevenZip = await SevenZipWasm();
+
+                        const archiveName = 'input' + isArchive[0];
+                        sevenZip.FS.writeFile(archiveName, data);
+
+                        statusLeft.innerText = 'Extracting archive...';
+                        sevenZip.callMain(['e', archiveName, '-y']);
+
+                        const files = sevenZip.FS.readdir('/');
+                        const firstFile = files.find(name =>
+                            name !== '.' && name !== '..' && name !== archiveName &&
+                            !sevenZip.FS.isDir(sevenZip.FS.stat(name).mode)
+                        );
+
+                        if (firstFile) {
+                            data = sevenZip.FS.readFile(firstFile);
+                            filename = firstFile;
+                            console.log('Archive: Selected remote file:', filename, 'size:', data.length);
+                        }
+                    } catch (e) {
+                        console.error('Archive remote extract failed:', e);
+                        statusLeft.innerText = 'Extraction Error: ' + e.message;
+                    }
+                }
+
+                const vfsPath = "/tmp/" + filename;
+
+                try { FS.mkdir('/tmp'); } catch (e) { }
+                FS.writeFile(vfsPath, data);
+
+                var savedInterface = parseInt(localStorage.getItem('simcoupe_interface') || "0");
+
+                // Validate HDF or Archives for Atom mode
+                if (savedInterface > 0 && (type === 1 || type === 3)) {
+                    if (!filename.toLowerCase().endsWith('.hdf') && !filename.toLowerCase().match(/\.(7z|zip|gz)$/)) {
+                        customAlert('Atom interface only accepts .hdf hard disk images or compressed archives (.7z, .zip, .gz).', 'Invalid Image Type');
+                        return;
+                    }
+                } else if (type === 0 || (savedInterface === 0 && type === 1)) {
+                    if (filename.toLowerCase().endsWith('.hdf')) {
+                        customAlert('Floppy drives do not accept .hdf images. Please switch to Atom interface.', 'Invalid Image Type');
+                        return;
+                    }
+                }
+
+
+                if (type === 0 || type === 1 || type === 3) {
+                    const res = Module.ccall('EMS_InsertDisk', 'number', ['number', 'string'], [type, vfsPath]);
+                    if (res) {
+                        mediaNames[type] = filename;
+                        if (type === 0) {
+                            statElements[0].innerText = 'D1: ' + truncatePath(filename);
+                        } else if (type === 1) {
+                            var label = (savedInterface === 0) ? 'D2: ' : 'Pri: ';
+                            statElements[1].innerText = label + truncatePath(filename);
+                        } else if (type === 3) {
+                            statElements[3].innerText = 'Sec: ' + truncatePath(filename);
+                        }
+
+                        // Auto-boot if loaded via URL parameter d1
+                        if (type === 0 && window.location.search.includes('d1=')) {
+                            setTimeout(() => {
+                                statusLeft.innerText = 'Auto-booting Disk 1...';
+                                Module.ccall('EMS_Boot', null, ['number'], [1]); // 1 = Disk
+                            }, 1000);
+                        }
+                    }
+                } else {
+                    const res = Module.ccall('EMS_InsertTape', 'number', ['string'], [vfsPath]);
+                    if (res) {
+                        mediaNames[2] = filename;
+                        statElements[2].innerText = 'Tape: ' + truncatePath(filename);
+
+                        // Auto-load if loaded via URL parameter tape
+                        if (window.location.search.includes('tape=')) {
+                            setTimeout(() => {
+                                statusLeft.innerText = 'Auto-loading Tape...';
+                                Module.ccall('EMS_Boot', null, ['number'], [2]); // 2 = Tape
+                            }, 1000);
+                        }
+                    }
+                }
+                statusLeft.innerText = 'URL media loaded: ' + filename;
+                statusLeft.classList.remove('status-loading');
+                updateMenuChecks();
+            } catch (e) {
+                console.error("Failed to load from URL:", e);
+                statusLeft.innerText = 'Download Error: ' + e.message;
+                statusLeft.classList.remove('status-loading');
+                customAlert('Failed to download from URL even with CORS proxy (corsfix). The server may be blocking automated access or the link is broken.', 'Download Failed');
+            }
+        }
+
+        fileInput.addEventListener('change', async function (e) {
+            var file = e.target.files[0];
+            if (!file) return;
+
+            statusLeft.innerText = 'Processing file: ' + file.name;
+
+            let data;
+            let filename = file.name;
+
+            const isArchive = file.name.toLowerCase().match(/\.(7z|zip|gz)$/);
+            if (isArchive) {
+                try {
+                    console.log('Archive: Initializing 7z-wasm for', file.name);
+                    statusLeft.innerText = 'Initializing extraction engine...';
+
+                    const SevenZipWasm = (await import('https://cdn.jsdelivr.net/npm/7z-wasm@1.2.0/+esm')).default;
+                    const sevenZip = await SevenZipWasm();
+
+                    const buffer = await file.arrayBuffer();
+                    const archiveName = 'input' + isArchive[0];
+                    sevenZip.FS.writeFile(archiveName, new Uint8Array(buffer));
+
+                    statusLeft.innerText = 'Extracting archive...';
+                    // Command 'e' for extract to current dir, '-y' for assume yes
+                    sevenZip.callMain(['e', archiveName, '-y']);
+
+                    // Find the first extracted file (excluding the input and metadata)
+                    const files = sevenZip.FS.readdir('/');
+                    console.log('7z: Files in virtual FS:', files);
+
+                    const firstFileName = files.find(name =>
+                        name !== '.' && name !== '..' && name !== archiveName &&
+                        !sevenZip.FS.isDir(sevenZip.FS.stat(name).mode)
+                    );
+
+                    if (!firstFileName) throw new Error('Archive is empty or contains no files');
+
+                    data = sevenZip.FS.readFile(firstFileName);
+                    filename = firstFileName;
+                    console.log('7z: Selected file:', filename, 'size:', data.length);
+                    statusLeft.innerText = 'Extracted: ' + filename;
+                } catch (err) {
+                    console.error("7z extraction failed:", err);
+                    statusLeft.innerText = '7z Error: ' + err.message;
+                    customAlert("Failed to extract 7z archive: " + err.message, "Extraction Error");
+                    return;
+                }
+            } else {
+                data = new Uint8Array(await file.arrayBuffer());
+            }
+
+            var vfsPath = "/tmp/" + filename;
+            try { FS.mkdir('/tmp'); } catch (e) { }
+            FS.writeFile(vfsPath, data);
+
+            var savedInterface = parseInt(localStorage.getItem('simcoupe_interface') || "0");
+
+            // Validate HDF for Atom mode
+            if (savedInterface > 0 && (targetType === 1 || targetType === 3)) {
+                if (!filename.toLowerCase().endsWith('.hdf') && !file.name.toLowerCase().endsWith('.7z')) {
+                    customAlert('Atom interface only accepts .hdf or .7z hard disk images.', 'Invalid Image Type');
+                    fileInput.value = "";
+                    return;
+                }
+                // Disk 1 or Disk 2 (Floppy mode) should not be HDF
+                if (filename.toLowerCase().endsWith('.hdf')) {
+                    customAlert('Floppy drives do not accept .hdf images. If you are using a 7z archive, please ensure it contains a floppy disk image (.dsk, .sad, etc.).', 'Invalid Image Type');
+                    fileInput.value = "";
+                    return;
+                }
+            }
+
+            if (targetType === 0 || targetType === 1 || targetType === 3) {
+                var res = Module.ccall('EMS_InsertDisk', 'number', ['number', 'string'], [targetType, vfsPath]);
+                if (res) {
+                    mediaNames[targetType] = filename;
+                    if (targetType === 0) {
+                        statElements[0].innerText = 'D1: ' + truncatePath(filename);
+                    } else if (targetType === 1) {
+                        var label = (savedInterface === 0) ? 'D2: ' : 'Pri: ';
+                        statElements[1].innerText = label + truncatePath(filename);
+                    } else if (targetType === 3) {
+                        statElements[3].innerText = 'Sec: ' + truncatePath(filename);
+                    }
+                }
+            } else {
+                var res = Module.ccall('EMS_InsertTape', 'number', ['string'], [vfsPath]);
+                if (res) {
+                    mediaNames[2] = filename;
+                    statElements[2].innerText = 'Tape: ' + truncatePath(filename);
+                }
+            }
+            statusLeft.innerText = 'Media loaded: ' + filename;
+            updateMenuChecks();
+            fileInput.value = "";
+        });
+
+        window.addEventListener('keydown', (e) => {
+            // Prevent browser shortcuts for F-keys and other game keys
+            const blockedKeys = [
+                'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
+                'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+                'Tab', 'Insert', 'Delete', 'Home', 'End', 'PageUp', 'PageDown',
+                'Shift', 'Control', 'Alt', 'Meta'
+            ];
+
+            if (blockedKeys.includes(e.key)) {
+                e.preventDefault();
+            }
+
+            if (e.key === 'F10') {
+                var menu = document.getElementById('tool-menu');
+                var dropdown = menu.querySelector('.dropdown');
+                if (dropdown.style.display === 'flex') {
+                    dropdown.style.display = 'none';
+                    menu.classList.remove('active');
+                } else {
+                    document.querySelectorAll('.dropdown').forEach(d => d.style.display = '');
+                    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+                    dropdown.style.display = 'flex';
+                    menu.classList.add('active');
+                }
+            } else if (e.key === 'F1' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                openFilePicker(0);
+            } else if (e.key === 'F2' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                openFilePicker(1);
+            } else if (e.key === 'F3' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                openFilePicker(2);
+            }
+        });
+
+        // Ensure Shift/Alt/Ctrl don't trigger browser focus loss or unwanted shortcuts
+        window.addEventListener('keyup', (e) => {
+            const blockedKeys = [
+                'F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12',
+                'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight',
+                'Tab', 'Insert', 'Delete', 'Home', 'End', 'PageUp', 'PageDown',
+                'Shift', 'Control', 'Alt', 'Meta'
+            ];
+            if (blockedKeys.includes(e.key)) {
+                e.preventDefault();
+            }
+        });
+
+        // Close dropdowns on outside click
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.menu-item')) {
+                document.querySelectorAll('.dropdown').forEach(d => d.style.display = '');
+                document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+            }
+        });
+
+        // Update FPS and status every second
+        setInterval(() => {
+            if (typeof Module.ccall === 'function') {
+                try {
+                    const fps = Module.ccall('EMS_GetFPS', 'number', [], []);
+                    document.getElementById('stat-fps').innerText = fps + ' FPS';
+
+                    // Also sync options status periodically
+                    updateMenuChecks();
+                } catch (e) { }
+            }
+        }, 1000);
+    </script>
+    <script async src="simcoupe.js"></script>
+</body>
+
+</html>

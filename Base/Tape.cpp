@@ -107,12 +107,7 @@ bool Insert(const std::string& filepath)
     pbTape = std::make_unique<libspectrum_byte[]>(uSize);
     stream->Read(pbTape.get(), uSize);
 
-    std::string identify_name = stream->GetName();
-    auto pos = identify_name.find(" (zip)");
-    if (pos != std::string::npos)
-        identify_name = identify_name.substr(0, pos);
-
-    if (libspectrum_tape_read(pTape, pbTape.get(), uSize, LIBSPECTRUM_ID_UNKNOWN, identify_name.c_str()) != LIBSPECTRUM_ERROR_NONE)
+    if (libspectrum_tape_read(pTape, pbTape.get(), uSize, LIBSPECTRUM_ID_UNKNOWN, filepath.c_str()) != LIBSPECTRUM_ERROR_NONE)
     {
         Eject();
         return false;

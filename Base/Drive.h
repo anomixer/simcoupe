@@ -50,6 +50,9 @@ public:
     void Flush() override;
     void Reset() override;
 
+    bool IsModified() const override { return m_disk && m_disk->IsModified(); }
+    void ClearModified() override { if (m_disk) m_disk->ClearModified(); }
+
     std::string DiskPath() const override { return m_disk ? m_disk->GetPath() : ""; }
     std::string DiskFile() const override { return m_disk ? m_disk->GetFile() : ""; }
 

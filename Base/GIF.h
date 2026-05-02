@@ -30,9 +30,9 @@ bool Start(int flags);
 void Stop();
 void Toggle(int flags);
 bool IsRecording();
-std::string GetLastPath();
 
 void AddFrame(const FrameBuffer& fb);
+const std::string& GetLastPath();
 }
 
 

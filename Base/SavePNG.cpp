@@ -177,20 +177,21 @@ bool SaveFile(FILE* file, const FrameBuffer& fb)
 
 namespace PNG
 {
-static std::string png_path;
+
+static std::string last_png_path;
 
 bool Save(const FrameBuffer& fb)
 {
 #ifdef HAVE_LIBZ
-    png_path = Util::UniqueOutputPath("png");
-    unique_FILE file = fopen(png_path.c_str(), "wb");
+    last_png_path = Util::UniqueOutputPath("png");
+    unique_FILE file = fopen(last_png_path.c_str(), "wb");
     if (file && SaveFile(file, fb))
     {
-        Frame::SetStatus("Saved {}", png_path);
+        Frame::SetStatus("Saved {}", last_png_path);
         return true;
     }
 
-    Frame::SetStatus("Save failed: {}", png_path);
+    Frame::SetStatus("Save failed: {}", last_png_path);
 #else
     Frame::SetStatus("Screen saving requires zlib");
 #endif
@@ -198,9 +199,9 @@ bool Save(const FrameBuffer& fb)
     return false;
 }
 
-std::string GetLastPath()
+const std::string& GetLastPath()
 {
-    return png_path;
+    return last_png_path;
 }
 
 } // namespace PNG

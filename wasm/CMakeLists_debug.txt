@@ -1,0 +1,29 @@
+cmake_minimum_required(VERSION 3.18...3.31)
+
+project(simcoupe)
+set(PROJECT_TITLE SimCoupe)
+
+set(ORIG_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/..")
+
+if (EMSCRIPTEN)
+  add_compile_options("-sUSE_SDL=2")
+endif()
+
+set(CMAKE_MODULE_PATH "${ORIG_SRC_DIR}/cmake" ${CMAKE_MODULE_PATH})
+include(GNUInstallDirs)
+include(PreCompiledHeaders)
+include(FetchContent)
+
+set(BASE_CPP_FILES
+    ${ORIG_SRC_DIR}/Base/Actions.cpp
+)
+
+add_executable(${PROJECT_NAME} ${BASE_CPP_FILES})
+
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+
+target_include_directories(${PROJECT_NAME} PRIVATE . ${ORIG_SRC_DIR}/Base)
+
+if (EMSCRIPTEN)
+  target_link_options(${PROJECT_NAME} PRIVATE "-sUSE_SDL=2" "-sWASM=1")
+endif()

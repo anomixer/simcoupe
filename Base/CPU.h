@@ -54,7 +54,6 @@ void Exit(bool fReInit_ = false);
 
 void Run();
 void ExecuteChunk();
-bool Iteration();
 
 void Reset(bool active);
 void NMI();
