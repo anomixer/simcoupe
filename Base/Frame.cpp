@@ -125,11 +125,6 @@ int AspectWidth()
     return static_cast<int>(std::round(Width() * aspect_ratio));
 }
 
-const FrameBuffer& Buffer()
-{
-    return *pFrameBuffer;
-}
-
 void Update()
 {
     if (!draw_frame)

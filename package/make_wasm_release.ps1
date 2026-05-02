@@ -39,7 +39,19 @@ function Restore-Files {
 }
 
 try {
-    # 3. Find Ninja (prioritize PATH, then VS)
+    # 3. Check and install CMake/Ninja via winget if missing
+    if (!(Get-Command cmake.exe -ErrorAction SilentlyContinue)) {
+        Write-Host "CMake not found. Attempting to install via winget..." -ForegroundColor Cyan
+        Start-Process winget -ArgumentList "install Kitware.CMake --accept-package-agreements --accept-source-agreements" -Wait -NoNewWindow
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+    }
+    if (!(Get-Command ninja.exe -ErrorAction SilentlyContinue)) {
+        Write-Host "Ninja not found. Attempting to install via winget..." -ForegroundColor Cyan
+        Start-Process winget -ArgumentList "install Ninja-build.Ninja --accept-package-agreements --accept-source-agreements" -Wait -NoNewWindow
+        $env:Path = [System.Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path", "User")
+    }
+
+    # Find Ninja (prioritize PATH, then VS)
     $ninja_path = Get-Command ninja.exe -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source
     if (!$ninja_path) {
         $vs_ninja = "C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe"
@@ -54,6 +66,8 @@ try {
 
     # 4. Initialize Emscripten (Relative to Repo Root)
     $repo_root = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
+    Set-Location $repo_root
+    
     $emsdk_path = Join-Path $repo_root "emsdk-wasm"
     $ems_dir = Join-Path $emsdk_path "upstream\emscripten"
     $script:emcmake_cmd = Join-Path $ems_dir "emcmake.bat"
@@ -182,9 +196,16 @@ public class PyProxy {
     Push-Location $build_dir
     Write-Host "Configuring with emcmake..."
     & $script:emcmake_cmd cmake ../wasm -G Ninja "-DCMAKE_MAKE_PROGRAM=$ninja_path" -DCMAKE_BUILD_TYPE=Release -DBUILD_BACKEND=sdl "-DCMAKE_C_FLAGS=-Dstrnicmp=strncasecmp -D_stricmp=strcasecmp"
+    if ($LASTEXITCODE -ne 0) { throw "CMake configuration failed." }
     
     Write-Host "Building..."
-    & cmake --build .
+    $build_log = "build_output.log"
+    & cmake --build . > $build_log 2>&1
+    if ($LASTEXITCODE -ne 0) { 
+        Write-Host "`nBUILD FAILED! Showing last 100 lines of output:`n" -ForegroundColor Red
+        Get-Content $build_log | Select-Object -Last 100
+        throw "Build failed with exit code $LASTEXITCODE" 
+    }
     
     Pop-Location
     Write-Host "WASM build completed successfully!"
@@ -192,11 +213,17 @@ public class PyProxy {
     # Copy artifacts to wasm/deploy
     Write-Host "Copying artifacts to wasm/deploy..."
     $deploy_dir = Join-Path $repo_root "wasm/deploy"
-    Copy-Item "$build_dir\simcoupe.wasm" $deploy_dir -Force
-    Copy-Item "$build_dir\simcoupe.js" $deploy_dir -Force
-    Copy-Item "$build_dir\simcoupe.data" $deploy_dir -Force
-    if (Test-Path "$build_dir\simcoupe.wasm.map") {
-        Copy-Item "$build_dir\simcoupe.wasm.map" $deploy_dir -Force
+    if (!(Test-Path $deploy_dir)) { mkdir $deploy_dir | Out-Null }
+    
+    $artifacts = @("simcoupe.wasm", "simcoupe.js", "simcoupe.data", "simcoupe.wasm.map")
+    foreach ($art in $artifacts) {
+        $src = Join-Path $build_dir $art
+        if (Test-Path $src) {
+            Write-Host "Copying $art..." -ForegroundColor Gray
+            Copy-Item $src $deploy_dir -Force
+        } elseif ($art -ne "simcoupe.wasm.map") {
+            Write-Warning "Required artifact missing: $src"
+        }
     }
     Write-Host "Artifacts updated in wasm/deploy`n"
 

@@ -175,33 +175,6 @@ void Run()
     TRACE("Quitting main emulation loop...\n");
 }
 
-bool Iteration()
-{
-    if (UI::CheckEvents())
-    {
-        if (g_fPaused)
-            return true;
-
-        if (!Debug::IsActive() && !GUI::IsModal())
-            ExecuteChunk();
-
-        Frame::End();
-
-        if (CPU::frame_cycles >= CPU_CYCLES_PER_FRAME)
-        {
-            EventFrameEnd(CPU_CYCLES_PER_FRAME);
-
-            IO::FrameUpdate();
-            Debug::FrameEnd();
-            Frame::Flyback();
-
-            CPU::frame_cycles %= CPU_CYCLES_PER_FRAME;
-            return true; // Frame completed
-        }
-    }
-    return false; // Frame not completed
-}
-
 void Reset(bool active)
 {
     if (GetOption(fastreset) && reset_asserted && !active)

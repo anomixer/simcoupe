@@ -1,5 +1,6 @@
 #include "SimCoupe.h"
 #include "Main.h"
+#include "Audio.h"
 #include "AVI.h"
 #include "Actions.h"
 #include "CPU.h"
@@ -332,64 +333,70 @@
 }
 #endif
 
+static double g_last_time = 0;
+static double g_accumulator = 0;
+
 int main(int argc_, char *argv_[]) {
   if (Main::Init(argc_, argv_)) {
 #ifdef __EMSCRIPTEN__
-    // WASM main loop: Strict Audio-Led Synchronization.
-    // Instead of fixed time, we run frames only when the audio buffer needs
-    // data.
+    g_last_time = emscripten_get_now();
+    g_accumulator = 0;
+
+    // WASM main loop: Hybrid Accumulator + Audio Throttle for maximum smoothness.
     emscripten_set_main_loop(
         []() {
-          extern bool g_audioEnabled;
-          extern SDL_AudioDeviceID dev;
-          static double last_time = emscripten_get_now();
-          static double accumulator = 0;
-
           if (!UI::CheckEvents())
             return;
-          if (g_fPaused)
+          if (g_fPaused) {
+            g_last_time = emscripten_get_now();
             return;
+          }
 
           double now = emscripten_get_now();
-          double delta = now - last_time;
-          last_time = now;
+          double delta = now - g_last_time;
+          g_last_time = now;
+          
+          // Cap delta to 100ms to avoid huge burst after lag (e.g. tab switched back)
+          if (delta > 200.0) delta = 200.0;
+          g_accumulator += delta;
 
-          // Cap delta to 100ms to avoid burst catch-up after tab switching
-          if (delta > 100.0)
-            delta = 100.0;
-          accumulator += delta;
-
-          // Calculate frame duration based on current speed setting (100% =
-          // 20ms) If Turbo mode is active, we target 1000% speed to run as fast
-          // as possible.
+          // 100% speed = 20ms per frame (50Hz)
           int nSpeed = Frame::TurboMode() ? 1000 : GetOption(speed);
           double frame_duration = 20.0 * (100.0 / std::max(10, nSpeed));
 
-          // Catch up with frames
-          while (accumulator >= frame_duration) {
-            accumulator -= frame_duration;
+          int frames_run = 0;
+          while (g_accumulator >= frame_duration) {
+            
+            // Audio Throttle: If we have > 150ms queued, slow down.
+            // 44100Hz * 0.15s * 4 bytes = 26460 bytes
+            // Increased threshold to avoid deadlock if audio context is suspended
+            if (Audio::GetQueuedSize() > 28000) {
+                break;
+            }
 
-            // Run exactly one full emulated frame (50Hz cycles)
-            for (int i = 0; i < 20000; i++) {
+            g_accumulator -= frame_duration;
+            frames_run++;
+
+            // Run until the end of the emulated frame (CPU_CYCLES_PER_FRAME)
+            for (int i = 0; i < 1000000; i++) {
               if (!Debug::IsActive() && !GUI::IsModal())
                 CPU::ExecuteChunk();
 
-              Frame::End();
-
               if (CPU::frame_cycles >= CPU_CYCLES_PER_FRAME) {
+                Frame::End();
                 EventFrameEnd(CPU_CYCLES_PER_FRAME);
                 IO::FrameUpdate();
                 Debug::FrameEnd();
                 Frame::Flyback();
-                CPU::frame_cycles %= CPU_CYCLES_PER_FRAME;
+                CPU::frame_cycles -= CPU_CYCLES_PER_FRAME;
                 Input::Update();
                 g_frameCount++;
                 break;
               }
             }
 
-            // Safety: don't catch up too much in one tick
-            if (emscripten_get_now() - now > 16.0)
+            // Safety: don't spend more than 32ms in one browser tick (max 2-3 frames at 100%)
+            if (emscripten_get_now() - now > 32.0)
               break;
           }
         },
@@ -411,6 +418,12 @@ bool Init(int argc_, char *argv_[]) {
     return false;
   if (!Options::Load(argc_, argv_))
     return false;
+
+  // WASM Defaults Overrides (only if not already set or first run)
+  if (GetOption(visiblearea) == 0) SetOption(visiblearea, 1); // Default to Small Border
+  SetOption(status, true); // Ensure status messages are on by default for WASM
+  SetOption(profile, true); // Show FPS by default
+  
   SetOption(autoload, true);
   if (!OSD::Init())
     return false;

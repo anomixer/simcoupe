@@ -94,3 +94,20 @@ void AtaAdapter::Detach()
     m_pDisk0.reset();
     m_pDisk1.reset();
 }
+
+void AtaAdapter::Flush()
+{
+    // AtaAdapter itself doesn't need to flush, but could if needed
+}
+
+bool AtaAdapter::IsModified(int nDevice_) const
+{
+    auto& pDisk = (nDevice_ == 0) ? m_pDisk0 : m_pDisk1;
+    return pDisk && pDisk->IsModified();
+}
+
+void AtaAdapter::ClearModified(int nDevice_)
+{
+    auto& pDisk = (nDevice_ == 0) ? m_pDisk0 : m_pDisk1;
+    if (pDisk) pDisk->ClearModified();
+}

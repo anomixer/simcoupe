@@ -61,14 +61,6 @@ void Sound::Exit()
 
 void Sound::FrameUpdate()
 {
-#ifdef __EMSCRIPTEN__
-    // Skip audio generation until user explicitly interacts with the page.
-    // This prevents buffer overflow while AudioContext is suspended.
-    extern bool g_audioEnabled;
-    if (!g_audioEnabled)
-        return;
-#endif
-
     static bool fSidUsed = false;
     static bool sp0256_used = false;
 
@@ -98,11 +90,6 @@ void Sound::FrameUpdate()
     if (SAMPLE_BITS == 16 && SAMPLE_CHANNELS == 2)
         nSize = AdjustSpeed(pbSampleBuffer, nSize, GetOption(speed));
 
-#ifdef __EMSCRIPTEN__
-    // Non-blocking audio queue without any waiting or buffer checks.
-    // This avoids potential deadlocks from SDL_GetQueuedAudioSize or thread sleeps.
-    Audio::AddData(pbSampleBuffer, nSize);
-#else
     auto buffer_level = Audio::AddData(pbSampleBuffer, nSize);
 
     using namespace std::chrono;
@@ -115,6 +102,7 @@ void Sound::FrameUpdate()
     {
         frame_time = now;
     }
+#ifndef __EMSCRIPTEN__
     else if (!GetOption(audiosync) && GetOption(speed) == 100)
     {
         auto max_adjust = 0.01f;

@@ -1,43 +1,60 @@
 // Part of SimCoupe - A SAM Coupe emulator
+//
+// Audio.cpp: SDL sound implementation
+//
+//  Copyright (c) 1999-2015 Simon Owen
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation; either version 2 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
 #include "SimCoupe.h"
+
 #include "Audio.h"
 #include "Options.h"
 #include "Sound.h"
 
-#ifdef __EMSCRIPTEN__
-#include <SDL.h>
-#endif
+constexpr auto MIN_LATENCY_FRAMES = 4;
 
-constexpr auto MIN_LATENCY_FRAMES = 
-#ifdef __EMSCRIPTEN__
-    12;
-#else
-    4;
-#endif
+SDL_AudioDeviceID dev;
 
-SDL_AudioDeviceID dev = 0;
+////////////////////////////////////////////////////////////////////////////////
 
 bool Audio::Init()
 {
     Exit();
+
     SDL_AudioSpec desired{};
     desired.freq = SAMPLE_FREQ;
     desired.format = AUDIO_S16LSB;
     desired.channels = SAMPLE_CHANNELS;
-#ifdef __EMSCRIPTEN__
-    desired.samples = 2048; // Lower latency for WASM
-#else
     desired.samples = 512;
-#endif
+
     dev = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
-    if (!dev) return false;
+    if (!dev)
+    {
+        TRACE("SDL_OpenAudio failed: {}\n", SDL_GetError());
+        return false;
+    }
+
     SDL_PauseAudioDevice(dev, 0);
     return true;
 }
 
 void Audio::Exit()
 {
-    if (dev) {
+    if (dev)
+    {
         SDL_CloseAudioDevice(dev);
         dev = 0;
     }
@@ -45,18 +62,22 @@ void Audio::Exit()
 
 float Audio::AddData(uint8_t* pData_, int len_bytes)
 {
-    if (!dev) return 0.0f;
-#ifdef __EMSCRIPTEN__
-    if (SDL_GetAudioDeviceStatus(dev) != SDL_AUDIO_PLAYING) return 0.0f;
     SDL_QueueAudio(dev, pData_, len_bytes);
-    return 0.0f;
-#else
-    SDL_QueueAudio(dev, pData_, len_bytes);
+
     auto buffer_frames = std::max(GetOption(latency), MIN_LATENCY_FRAMES);
     Uint32 buffer_size = SAMPLES_PER_FRAME * buffer_frames * BYTES_PER_SAMPLE;
-    while (SDL_GetQueuedAudioSize(dev) >= buffer_size) {
+
+#ifndef __EMSCRIPTEN__
+    while (SDL_GetQueuedAudioSize(dev) >= buffer_size)
+    {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    return static_cast<float>(SDL_GetQueuedAudioSize(dev)) / buffer_size;
 #endif
+
+    return static_cast<float>(SDL_GetQueuedAudioSize(dev)) / buffer_size;
+}
+uint32_t Audio::GetQueuedSize()
+{
+    extern SDL_AudioDeviceID dev;
+    return dev ? SDL_GetQueuedAudioSize(dev) : 0;
 }

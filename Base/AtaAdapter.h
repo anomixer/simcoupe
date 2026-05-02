@@ -29,36 +29,25 @@ public:
     void Out(uint16_t wPort_, uint8_t bVal_) override;
 
     void Reset() override;
-    void Flush() override { if (m_pDisk0) m_pDisk0->Flush(); if (m_pDisk1) m_pDisk1->Flush(); }
-    void FrameEnd() override {
-        if (m_uActive) m_uActive--;
-        if (m_pDisk0 && m_pDisk0->IsModified()) m_modified0 = true;
-        if (m_pDisk1 && m_pDisk1->IsModified()) m_modified1 = true;
-    }
+    void FrameEnd() override { if (m_uActive) m_uActive--; }
 
 public:
     bool IsActive() const { return m_uActive != 0; }
-    bool IsModified(int nDevice_) const {
-        if (nDevice_ == 0) return m_modified0 || (m_pDisk0 && m_pDisk0->IsModified());
-        if (nDevice_ == 1) return m_modified1 || (m_pDisk1 && m_pDisk1->IsModified());
-        return false;
-    }
-    void ClearModified(int nDevice_) {
-        if (nDevice_ == 0) { m_modified0 = false; if (m_pDisk0) m_pDisk0->ClearModified(); }
-        if (nDevice_ == 1) { m_modified1 = false; if (m_pDisk1) m_pDisk1->ClearModified(); }
-    }
 
 public:
     bool Attach(const std::string& disk_path, int nDevice_);
     virtual bool Attach(std::unique_ptr<HardDisk> disk, int nDevice_);
     virtual void Detach();
+    virtual void Flush() override;
+
+    bool IsModified(int nDevice_) const;
+    void ClearModified(int nDevice_);
 
 protected:
     uint16_t InWord(uint16_t wPort_);
     void OutWord(uint16_t wPort_, uint16_t wVal_);
 
 protected:
-    bool m_modified0 = false, m_modified1 = false;
     unsigned int m_uActive = 0; // active when non-zero, decremented by FrameEnd()
 
 private:

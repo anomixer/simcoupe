@@ -26,4 +26,5 @@ public:
     static bool Init();
     static void Exit();
     static float AddData(uint8_t* pData, int len_bytes);
+    static uint32_t GetQueuedSize();
 };

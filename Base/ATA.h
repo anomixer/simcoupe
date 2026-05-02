@@ -141,4 +141,8 @@ protected:
     bool m_f8bitOnReset = false;    // 8-bit data transfer state to set on soft reset
     bool m_f8bit = false;           // true if 8-bit data transfers are enabled
     bool m_fLegacy = false;         // true if we're to support legacy requests
+    bool m_modified = false;        // true if the device has been written to
+public:
+    bool IsModified() const { return m_modified; }
+    void ClearModified() { m_modified = false; }
 };

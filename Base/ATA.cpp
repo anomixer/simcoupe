@@ -471,7 +471,10 @@ bool ATADevice::ReadWriteSector(bool fWrite_)
     }
 
     if (fWrite_)
+    {
+        m_modified = true;
         return WriteSector(uSector, m_sector_data.data());
+    }
 
     return ReadSector(uSector, m_sector_data.data());
 }

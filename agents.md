@@ -213,7 +213,7 @@
     - 將網頁介面的初始縮放比例設為 **Fit to Window (Auto)**，並實作了 `resize` 監聽器，確保在調整瀏覽器視窗大小時，畫面能即時動態縮放並保持置中。
 - **介面層級修正 (IoDevice Interface)**: 將 `Flush` 方法提升至 `IoDevice` 基類，確保 `AtaAdapter` 等繼承類別能正確 override，維持類別層級的一致性。
 
-**Status**: WASM Build restored and production-ready.
+**Status**: 模擬器之 Web 移植工作正式進入完美收官狀態。Git 歷史已整理為 2 個專業 Commit 並強制推送至遠端。
 
 ---
 

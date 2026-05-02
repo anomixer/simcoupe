@@ -214,6 +214,7 @@ if (EMSCRIPTEN)
   target_compile_options(${PROJECT_NAME} PRIVATE "-sFULL_ES3=1")
   target_compile_definitions(${PROJECT_NAME} PRIVATE HAVE_CONFIG_H HAVE_LIBSDL2 HAVE_STD_FILESYSTEM HAVE_ZLIB HAVE_MINIZIP)
   target_link_options(${PROJECT_NAME} PRIVATE 
+    "-O0"
     "-sUSE_SDL=2" 
     "-sUSE_ZLIB=1" 
     "-sUSE_BZIP2=1" 

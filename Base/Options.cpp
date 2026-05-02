@@ -68,7 +68,6 @@ static bool SetNamedValue(const std::string& option_name, const std::string& str
     else if (name == "maxintensity") SetValue(g_config.maxintensity, str);
     else if (name == "blackborder") SetValue(g_config.blackborder, str);
     else if (name == "tryvrr") SetValue(g_config.tryvrr, str);
-    else if (name == "usewebgl") SetValue(g_config.usewebgl, str);
     else if (name == "gifframeskip") SetValue(g_config.gifframeskip, str);
     else if (name == "rom") SetValue(g_config.rom, str);
     else if (name == "romwrite") SetValue(g_config.romwrite, str);
@@ -143,6 +142,7 @@ static bool SetNamedValue(const std::string& option_name, const std::string& str
     else if (name == "breakonexec") SetValue(g_config.breakonexec, str);
     else if (name == "fkeys") SetValue(g_config.fkeys, str);
     else if (name == "rasterdebug") SetValue(g_config.rasterdebug, str);
+    else if (name == "usewebgl") SetValue(g_config.usewebgl, str);
     else
     {
         return false;
@@ -246,7 +246,6 @@ bool Save()
         ofs << "maxintensity=" << to_string(g_config.maxintensity) << std::endl;
         ofs << "blackborder=" << to_string(g_config.blackborder) << std::endl;
         ofs << "tryvrr=" << to_string(g_config.tryvrr) << std::endl;
-        ofs << "usewebgl=" << to_string(g_config.usewebgl) << std::endl;
         ofs << "gifframeskip=" << to_string(g_config.gifframeskip) << std::endl;
         ofs << "rom=" << to_string(g_config.rom) << std::endl;
         ofs << "romwrite=" << to_string(g_config.romwrite) << std::endl;
