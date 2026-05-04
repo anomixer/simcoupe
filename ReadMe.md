@@ -2,6 +2,10 @@
 
 By Simon Owen (simon@simonowen.com)
 
+### Forker's Info:
+> If you are looking for the **Web** version documentation, click [here](ReadMe-WASM.md).  
+> To try the emulator directly in your browser, click [here](https://anomixer.github.io/simcoupe).
+
 [![Windows CI](https://github.com/simonowen/simcoupe/actions/workflows/windows-ci.yml/badge.svg)](https://github.com/simonowen/simcoupe/actions/workflows/windows-ci.yml)
 [![Linux CI](https://github.com/simonowen/simcoupe/actions/workflows/linux-ci.yml/badge.svg)](https://github.com/simonowen/simcoupe/actions/workflows/linux-ci.yml)
 [![macOS CI](https://github.com/simonowen/simcoupe/actions/workflows/macos-ci.yml/badge.svg)](https://github.com/simonowen/simcoupe/actions/workflows/macos-ci.yml)

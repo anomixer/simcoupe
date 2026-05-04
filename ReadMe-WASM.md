@@ -159,6 +159,11 @@ A: URL parameters like `?d1=...` are only parsed during the initial boot sequenc
 
 A: This usually happens when the remote server fails to respond to the proxy request. Just **refresh the page (F5)** and try again; it usually resolves on the second attempt.
 
+### Credits
+
+- **Original Emulator (SimCoupe)**: Simon Owen & contributors
+- **WebAssembly Port & Web UI**: anomixer & Antigravity (Agentic AI)
+
 ---
 
 <a name="繁體中文"></a>
@@ -313,3 +318,8 @@ A: 雲端載入參數僅在模擬器啟動初期進行解析。請在**新的瀏
 **Q: 載入 URL 時出現 CORS 錯誤訊息怎麼辦？**
 
 A: 這通常是遠端伺服器回應代理請求失敗所致。只要**重新整理頁面 (F5)** 再試一次即可，第二次通常就能成功載入。
+
+### 鳴謝 (Credits)
+
+- **原始模擬器 (SimCoupe)**: Simon Owen 及貢獻者
+- **WebAssembly 移植與網頁介面**: anomixer 與 Antigravity (Agentic AI)
