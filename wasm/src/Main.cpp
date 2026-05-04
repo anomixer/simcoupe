@@ -368,10 +368,30 @@ int main(int argc_, char *argv_[]) {
           while (g_accumulator >= frame_duration) {
             
             // Audio Throttle: If we have > 150ms queued, slow down.
-            // 44100Hz * 0.15s * 4 bytes = 26460 bytes
-            // Increased threshold to avoid deadlock if audio context is suspended
-            if (Audio::GetQueuedSize() > 28000) {
-                break;
+            // But ONLY if audio is actually being consumed (user has clicked).
+            // If audio context is suspended, data piles up but never drains,
+            // which would freeze the main loop entirely.
+            auto queued = Audio::GetQueuedSize();
+            if (queued > 28000) {
+                // Check if audio is actually playing by seeing if queue drains
+                static uint32_t s_last_queued = 0;
+                static int s_stuck_count = 0;
+                if (queued >= s_last_queued) {
+                    s_stuck_count++;
+                    if (s_stuck_count > 30) {
+                        // Audio stuck (context suspended), clear queue and skip throttle
+                        { extern SDL_AudioDeviceID dev; SDL_ClearQueuedAudio(dev); }
+                        s_stuck_count = 0;
+                        s_last_queued = 0;
+                    } else {
+                        s_last_queued = queued;
+                        break;
+                    }
+                } else {
+                    // Audio IS draining, normal throttle
+                    s_last_queued = queued;
+                    break;
+                }
             }
 
             g_accumulator -= frame_duration;

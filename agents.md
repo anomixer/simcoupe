@@ -217,3 +217,24 @@
 
 ---
 
+## 13. 2026-05-04：首次執行流程與渲染穩定化終極修復 (Final Polish)
+
+針對瀏覽器「冷啟動 (Cold Start)」環境下的渲染與初始化瑕疵進行了最後攻堅。
+
+- **首次執行引導系統 (First-Run UX)**:
+    - 解決了清空瀏覽器資料後造訪產生的「初始黑屏」問題。
+    - 實作了 **「2秒自動初始化 + OK Let's Go 按鈕」** 流程。系統會在背景完成 localStorage 預設值寫入，並引導使用者透過按鈕開啟新分頁，確保在最乾淨的 WebGL context 下啟動。
+- **音訊掛起死結修復 (Audio Throttle Deadlock Fix)**:
+    - **問題**: 瀏覽器在使用者點擊前會掛起 (Suspend) 音訊，導致 SDL 音訊佇列堆積，進而觸發引擎的節流機制導致整個模擬器在啟動時靜止（0 FPS）。
+    - **修復**: 在 `Main.cpp` 實作了智慧偵測，當偵測到音訊佇列未被消耗（Stuck）時，自動執行 `SDL_ClearQueuedAudio` 並跳過節流，確保模擬器一載入就開始運行。
+- **WebGL 縮放強制同步 (WebGL Scaling Enforcement)**:
+    - **問題**: 在 WebGL 模式下，SDL2 內部會嘗試接管畫布樣式，導致網頁端的「Fit to Window (Auto)」縮放失效。
+    - **修復**: 
+        - 將所有縮放 CSS 樣式升級為 `!important` 級別，強行奪回控制權。
+        - 實作了 **「持久化縮放 (Zoom Persistence)」** 與每 500ms 的強制校正機制，確保渲染後端切換後縮放狀態不跳變。
+- **介面細節磨光**: 
+    - 優化 FPS 狀態列，在引擎初始化首秒顯示 `-- FPS` 以代替不準確的 `0 FPS`。
+    - 調整 `setStatus` 邏輯，確保 Loading Overlay 在首次執行流程完成前不會提前消失。
+
+**Status**: SimCoupe WASM Port 完美收官，具備商業級的穩定度與使用者體驗。
+

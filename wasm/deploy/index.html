@@ -498,7 +498,7 @@
 
     <div id="loading-overlay">
         <div class="spinner"></div>
-        <p style="margin-top: 1rem;">Initialising SimCoupe Engine...</p>
+        <p id="loading-text" style="margin-top: 1rem;">Initialising SimCoupe Engine...</p>
     </div>
 
     <!-- Desktop Menu Bar -->
@@ -837,22 +837,52 @@
             try { Module.ccall('EMS_StartAudio', null, [], []); } catch (e) { }
         }
 
+        // ── First-Run Defaults ──────────────────────────────────────────
+        var isVeryFirstRun = !localStorage.getItem('simcoupe_ready');
+        if (isVeryFirstRun) {
+            document.getElementById('loading-text').textContent = 'First Run, Initializing...';
+            if (localStorage.getItem('simcoupe_usewebgl') === null) localStorage.setItem('simcoupe_usewebgl', '1');
+            if (localStorage.getItem('simcoupe_interface') === null) localStorage.setItem('simcoupe_interface', '0');
+            if (localStorage.getItem('simcoupe_visiblearea') === null) localStorage.setItem('simcoupe_visiblearea', '1');
+            localStorage.setItem('simcoupe_ready', '1');
+
+            // After 5 seconds, show the "Let's Go" button regardless of engine state.
+            setTimeout(function () {
+                var loadingText = document.getElementById('loading-text');
+                loadingText.textContent = 'Setup Complete!';
+                // Hide spinner
+                var spinner = loadingText.parentElement.querySelector('.spinner');
+                if (spinner) spinner.style.display = 'none';
+                // Create button
+                var goBtn = document.createElement('button');
+                goBtn.textContent = 'OK, Let\u2019s Go!';
+                goBtn.style.cssText = 'margin-top:1.5rem;padding:0.8rem 2.5rem;font-size:1.1rem;font-weight:bold;border:none;border-radius:8px;background:linear-gradient(135deg,#4fc3f7,#0288d1);color:#fff;cursor:pointer;box-shadow:0 4px 15px rgba(2,136,209,0.4);transition:transform 0.15s,box-shadow 0.15s;';
+                goBtn.onmouseenter = function () { goBtn.style.transform = 'scale(1.05)'; goBtn.style.boxShadow = '0 6px 20px rgba(2,136,209,0.6)'; };
+                goBtn.onmouseleave = function () { goBtn.style.transform = 'scale(1)'; goBtn.style.boxShadow = '0 4px 15px rgba(2,136,209,0.4)'; };
+                goBtn.onclick = function () {
+                    window.open(location.href, '_blank');
+                    setTimeout(function () { window.close(); }, 300);
+                };
+                loadingText.parentElement.appendChild(goBtn);
+            }, 2000);
+        }
+
+        // ── Module Definition ──────────────────────────────────────────
         var Module = {
             arguments: (function () {
                 var args = [];
-                var savedWebGL = localStorage.getItem('simcoupe_usewebgl');
-                if (savedWebGL !== null) {
-                    args.push("-usewebgl", savedWebGL);
-                }
+                args.push("-usewebgl", localStorage.getItem('simcoupe_usewebgl') || "0");
 
-                var savedInterface = localStorage.getItem('simcoupe_interface');
-                if (savedInterface === "1") {
+                var itf = localStorage.getItem('simcoupe_interface');
+                if (itf === "1") {
                     args.push("-rom", "/Resource/atom.rom", "-drive2", "2");
-                } else if (savedInterface === "2") {
+                } else if (itf === "2") {
                     args.push("-rom", "/Resource/atomlite.rom", "-drive2", "3");
                 } else {
                     args.push("-rom", "/Resource/samcoupe.rom", "-drive2", "1");
                 }
+
+                args.push("-visiblearea", localStorage.getItem('simcoupe_visiblearea') || "1");
 
                 return args;
             })(),
@@ -861,6 +891,7 @@
             print: function (text) {
                 console.log(text);
                 if (text.includes("Main::Init: Success!")) {
+
                     overlay.classList.add('hidden');
 
                     var isFirstLoad = !sessionStorage.getItem('simcoupe_initialized');
@@ -884,12 +915,14 @@
                         }
 
                         updateMenuChecks();
-                        setZoom(0); // Default to Fit to Window (Auto)
+                        var savedZoom = localStorage.getItem('simcoupe_zoom');
+                        setZoom(savedZoom !== null ? parseFloat(savedZoom) : 0); 
 
                         // Aggressive sync for the first few seconds to ensure UI matches engine
                         let syncCount = 0;
                         const syncInterval = setInterval(() => {
                             updateMenuChecks();
+                            setZoom(currentZoom); // Force re-apply zoom/fit-to-window
                             syncCount++;
                             if (syncCount > 20) clearInterval(syncInterval); // Stop after 4 seconds (20 * 200ms)
                         }, 200);
@@ -919,7 +952,7 @@
                 });
                 return canvas;
             })(),
-            setStatus: function (text) { if (!text) overlay.classList.add('hidden'); }
+            setStatus: function (text) { if (!text && !isVeryFirstRun) overlay.classList.add('hidden'); }
         };
 
         function doAction(id) {
@@ -1164,36 +1197,37 @@
             updateMenuChecks();
         }
 
-        var currentZoom = 0; // Default to Fit to Window (Auto)
+        var currentZoom = parseFloat(localStorage.getItem('simcoupe_zoom') || "0");
         function setZoom(factor) {
             var canvas = document.getElementById('canvas');
             var container = canvas.parentElement;
             currentZoom = factor;
+            localStorage.setItem('simcoupe_zoom', factor);
 
             if (factor === 0) {
                 // Fit to Window: Fill the workspace as much as possible
-                container.style.width = '100%';
-                container.style.height = '100%';
-                container.style.maxWidth = '100%';
-                container.style.maxHeight = '100%';
-                canvas.style.width = '100%';
-                canvas.style.height = '100%';
-                canvas.style.maxWidth = '100%';
-                canvas.style.maxHeight = '100%';
+                container.style.setProperty('width', '100%', 'important');
+                container.style.setProperty('height', '100%', 'important');
+                container.style.setProperty('max-width', '100%', 'important');
+                container.style.setProperty('max-height', '100%', 'important');
+                canvas.style.setProperty('width', '100%', 'important');
+                canvas.style.setProperty('height', '100%', 'important');
+                canvas.style.setProperty('max-width', '100%', 'important');
+                canvas.style.setProperty('max-height', '100%', 'important');
             } else {
                 // Fixed Scale
-                container.style.width = 'auto';
-                container.style.height = 'auto';
-                container.style.maxWidth = 'none';
-                container.style.maxHeight = 'none';
+                container.style.setProperty('width', 'auto', 'important');
+                container.style.setProperty('height', 'auto', 'important');
+                container.style.setProperty('max-width', 'none', 'important');
+                container.style.setProperty('max-height', 'none', 'important');
                 
                 // Use internal resolution if possible, otherwise fallback to 800
                 var baseWidth = canvas.width || 800;
                 var targetWidth = baseWidth * factor;
-                canvas.style.width = targetWidth + 'px';
-                canvas.style.height = 'auto';
-                canvas.style.maxWidth = 'none';
-                canvas.style.maxHeight = 'none';
+                canvas.style.setProperty('width', targetWidth + 'px', 'important');
+                canvas.style.setProperty('height', 'auto', 'important');
+                canvas.style.setProperty('max-width', 'none', 'important');
+                canvas.style.setProperty('max-height', 'none', 'important');
             }
             updateZoomCheck();
         }
@@ -1220,6 +1254,7 @@
         setInterval(() => {
             updateMenuChecks();
             updateZoomCheck();
+            setZoom(currentZoom); // Periodically force zoom to prevent engine overrides
         }, 500);
 
         /* Custom Modal Implementation */
@@ -1696,7 +1731,7 @@
             if (typeof Module.ccall === 'function') {
                 try {
                     const fps = Module.ccall('EMS_GetFPS', 'number', [], []);
-                    document.getElementById('stat-fps').innerText = fps + ' FPS';
+                    document.getElementById('stat-fps').innerText = fps > 0 ? (fps + ' FPS') : '-- FPS';
 
                     // Also sync options status periodically
                     updateMenuChecks();
