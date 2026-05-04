@@ -235,6 +235,8 @@
 - **介面細節磨光**: 
     - 優化 FPS 狀態列，在引擎初始化首秒顯示 `-- FPS` 以代替不準確的 `0 FPS`。
     - 調整 `setStatus` 邏輯，確保 Loading Overlay 在首次執行流程完成前不會提前消失。
+- **跨平台腳本支援 (Shell Scripts)**: 
+    - 為 Linux/macOS 使用者實作了 `compile.sh` 與 `run.sh`，對齊了 Windows 版的建置與運行體驗。
 
 **Status**: SimCoupe WASM Port 完美收官，具備商業級的穩定度與使用者體驗。
 
