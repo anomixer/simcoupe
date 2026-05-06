@@ -1,5 +1,13 @@
 # SimCoupe - A SAM Coupé Emulator
 
+> [!IMPORTANT]
+> **This fork is now DEPRECATED.**
+> The web-native evolution of this project has moved to its own independent home:
+> ### 🚀 **[SamCoupeWeb](https://github.com/anomixer/SamCoupeWeb)**
+> Please follow the new repository for the latest updates, cloud features, and 7z support.
+
+---
+
 By Simon Owen (simon@simonowen.com)
 
 [![Windows CI](https://github.com/simonowen/simcoupe/actions/workflows/windows-ci.yml/badge.svg)](https://github.com/simonowen/simcoupe/actions/workflows/windows-ci.yml)
